@@ -24,7 +24,7 @@ class RegisterActivity : AppCompatActivity() {
         binding.loginBtn.setOnClickListener {
             val email = binding.emailInput.text.toString().trim()
             val password = binding.passwordInput.text.toString()
-            val username = "User" // simplest; you can add a username field in layout later
+            val username = "User" // maybe add a username field in layout later
 
             if (email.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Email and password required", Toast.LENGTH_SHORT).show()

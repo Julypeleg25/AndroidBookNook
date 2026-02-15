@@ -19,9 +19,8 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Auto-login
         if (Model.currentUserId() != null) {
-            startActivity(Intent(this, com.colman.booknook.app.ui.main.MainActivity::class.java))
+            startActivity(Intent(this, com.booknook.app.ui.main.MainActivity::class.java))
             finish()
             return
         }
