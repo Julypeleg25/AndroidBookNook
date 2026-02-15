@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:startDestination="@id/postsFragment">
+
+    <fragment
+        android:id="@+id/postsFragment"
+        android:name="com.colman.booknook.ui.posts.PostsFragment"
+        android:label="Posts" >
+        <action
+            android:id="@+id/action_posts_to_create"
+            app:destination="@id/bookSearchFragment" />
+        <action
+            android:id="@+id/action_posts_to_wishlist"
+            app:destination="@id/wishlistFragment" />
+        <action
+            android:id="@+id/action_posts_to_profile"
+            app:destination="@id/profileFragment" />
+        <action
+            android:id="@+id/action_posts_to_details"
+            app:destination="@id/postDetailsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/bookSearchFragment"
+        android:name="com.colman.booknook.ui.books.BookSearchFragment"
+        android:label="Search Books" />
+
+    <fragment
+        android:id="@+id/createPostFragment"
+        android:name="com.colman.booknook.ui.posts.CreatePostFragment"
+        android:label="Create Post" >
+        <argument
+            android:name="bookId"
+            app:argType="string" />
+        <argument
+            android:name="bookTitle"
+            app:argType="string" />
+        <argument
+            android:name="bookAuthor"
+            app:argType="string" />
+        <argument
+            android:name="bookThumbnail"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/postDetailsFragment"
+        android:name="com.colman.booknook.ui.posts.PostDetailsFragment"
+        android:label="Post Details">
+        <argument
+            android:name="postId"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/wishlistFragment"
+        android:name="com.colman.booknook.ui.wishlist.WishlistFragment"
+        android:label="Wishlist" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.colman.booknook.ui.profile.ProfileFragment"
+        android:label="Profile" />
+
+    <fragment
+        android:id="@+id/myPostsFragment"
+        android:name="com.colman.booknook.ui.posts.MyPostsFragment"
+        android:label="My Posts" />
+</navigation>
