@@ -1,4 +1,4 @@
-package com.booknook.app.model
+package com.colman.booknook.app.model
 
 data class Post(
     val id: String,
