@@ -16,6 +16,11 @@ class MainActivity : AppCompatActivity() {
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
         val navController = navHostFragment?.navController
+        val bottomNav = binding.bottomNav
+
+        if (navController != null) {
+            androidx.navigation.ui.NavigationUI.setupWithNavController(bottomNav, navController)
+        }
 
         if (Model.instance.isLoggedIn()) {
              navController?.navigate(R.id.postsFragment)
