@@ -47,5 +47,31 @@ class Model private constructor() {
         }
     }
 
-    // Add more methods as needed for Users, Wishlist, etc.
+    // Authentication
+    fun login(email: String, pass: String, callback: (Boolean) -> Unit) {
+        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        auth.signInWithEmailAndPassword(email, pass).addOnCompleteListener { task ->
+            callback(task.isSuccessful)
+        }
+    }
+
+    fun register(email: String, pass: String, username: String, callback: (Boolean) -> Unit) {
+        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        auth.createUserWithEmailAndPassword(email, pass).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                // Ideally create UserEntity in DB or Firebase Firestore here
+                callback(true)
+            } else {
+                callback(false)
+            }
+        }
+    }
+
+    fun logout() {
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+    }
+
+    fun isLoggedIn(): Boolean {
+        return com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null
+    }
 }
