@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
             androidx.navigation.ui.NavigationUI.setupWithNavController(bottomNav, navController)
         }
 
-        if (Model.instance.isLoggedIn()) {
+        if (Model.currentUserId() != null) {
              navController?.navigate(R.id.postsFragment)
         }
     }
