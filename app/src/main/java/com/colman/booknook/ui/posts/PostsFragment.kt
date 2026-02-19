@@ -8,7 +8,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.colman.booknook.R
 import com.colman.booknook.databinding.FragmentPostsBinding
-import com.colman.booknook.model.Model
+import com.booknook.app.model.Model
 import kotlinx.coroutines.launch
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
@@ -25,12 +25,24 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
 
+        binding.newPostBtn.setOnClickListener {
+            findNavController().navigate(R.id.action_posts_to_bookSearch)
+        }
+        binding.searchBtn.setOnClickListener {
+            findNavController().navigate(R.id.action_posts_to_filters)
+        }
+        binding.wishlistBtn.setOnClickListener {
+            findNavController().navigate(R.id.action_posts_to_wishlist)
+        }
+        binding.profileBtn.setOnClickListener {
+            findNavController().navigate(R.id.action_posts_to_profile)
+        }
+
         Model.observePosts().observe(viewLifecycleOwner) { list ->
             adapter.submit(list)
             binding.emptyText.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
         }
 
-        // refresh remote into cache (async)
         viewLifecycleOwner.lifecycleScope.launch {
             try { Model.refreshPosts() } catch (_: Exception) {}
         }
