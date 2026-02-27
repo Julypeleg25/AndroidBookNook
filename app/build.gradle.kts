@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.colman.booknook"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.colman.booknook"
@@ -33,6 +33,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+    }
+    
+    buildFeatures {
+        viewBinding = true
     }
 }
 
@@ -68,4 +72,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
+
+    // Picasso
+    implementation("com.squareup.picasso:picasso:2.8")
 }
