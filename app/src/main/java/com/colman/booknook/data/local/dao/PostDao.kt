@@ -1,4 +1,4 @@
-package com.colman.booknook.data.local.dao
+﻿package com.colman.booknook.data.local.dao
 
 import androidx.lifecycle.LiveData
 import androidx.room.*
@@ -10,10 +10,18 @@ interface PostDao {
     fun getAll(): LiveData<List<PostEntity>>
 
     @Query("SELECT * FROM posts WHERE userId = :userId ORDER BY createdAt DESC")
-    fun getPostsByUserId(userId: String): LiveData<List<PostEntity>>
+    fun getByUser(userId: String): LiveData<List<PostEntity>>
 
-    @Query("SELECT * FROM posts WHERE id = :id")
-    suspend fun getPostById(id: String): PostEntity?
+    @Query("SELECT * FROM posts WHERE id = :postId LIMIT 1")
+    fun getById(postId: String): LiveData<PostEntity?>
+
+    @Query("""SELECT * FROM posts
+        WHERE (:title IS NULL OR bookTitle LIKE '%' || :title || '%')
+          AND (:author IS NULL OR bookAuthor LIKE '%' || :author || '%')
+          AND (:minRating IS NULL OR rating >= :minRating)
+          AND (:minComments IS NULL OR commentsCount >= :minComments)
+        ORDER BY createdAt DESC""")
+    fun search(title: String?, author: String?, minRating: Int?, minComments: Int?): LiveData<List<PostEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(post: PostEntity)
@@ -21,6 +29,6 @@ interface PostDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(posts: List<PostEntity>)
 
-    @Query("DELETE FROM posts WHERE id = :id")
-    suspend fun delete(id: String)
+    @Query("DELETE FROM posts WHERE id = :postId")
+    suspend fun deleteById(postId: String)
 }

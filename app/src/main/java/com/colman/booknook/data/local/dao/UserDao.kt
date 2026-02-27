@@ -1,20 +1,17 @@
-package com.colman.booknook.data.local.dao
+﻿package com.colman.booknook.data.local.dao
 
 import androidx.lifecycle.LiveData
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.colman.booknook.data.local.entities.UserEntity
 
 @Dao
 interface UserDao {
-    @Query("SELECT * FROM users WHERE id = :id")
-    fun getUser(id: String): LiveData<UserEntity?>
-
-    @Query("SELECT * FROM users WHERE id = :id")
-    suspend fun getUserSync(id: String): UserEntity?
+    @Query("SELECT * FROM user LIMIT 1")
+    fun get(): LiveData<UserEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(user: UserEntity)
+
+    @Query("DELETE FROM user")
+    suspend fun clear()
 }
