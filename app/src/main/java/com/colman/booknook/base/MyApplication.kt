@@ -1,4 +1,4 @@
-package com.colman.booknook.base
+﻿package com.colman.booknook.base
 
 import android.app.Application
 import com.colman.booknook.model.Model
