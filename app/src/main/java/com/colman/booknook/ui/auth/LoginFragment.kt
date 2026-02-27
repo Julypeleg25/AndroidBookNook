@@ -10,7 +10,8 @@ import androidx.navigation.fragment.findNavController
 import com.colman.booknook.R
 import com.colman.booknook.databinding.FragmentLoginBinding
 import com.colman.booknook.model.Model
-
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
@@ -30,12 +31,13 @@ class LoginFragment : Fragment() {
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString()
             val password = binding.etPassword.text.toString()
-
             if (email.isNotEmpty() && password.isNotEmpty()) {
-                Model.instance.login(email, password) { success ->
-                    if (success) {
-                        findNavController().navigate(R.id.action_loginFragment_to_postsFragment)
-                    } else {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        Model.firebase.login(email, password)
+                        Model.ensureLocalProfile()
+                        findNavController().navigate(R.id.postsFragment)
+                    } catch (e: Exception) {
                         Toast.makeText(requireContext(), "Login Failed", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -43,7 +45,7 @@ class LoginFragment : Fragment() {
         }
 
         binding.tvRegister.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
+            findNavController().navigate(R.id.registerFragment)
         }
     }
 

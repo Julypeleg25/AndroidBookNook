@@ -10,7 +10,8 @@ import androidx.navigation.fragment.findNavController
 import com.colman.booknook.R
 import com.colman.booknook.databinding.FragmentRegisterBinding
 import com.colman.booknook.model.Model
-
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 class RegisterFragment : Fragment() {
 
     private var _binding: FragmentRegisterBinding? = null
@@ -31,13 +32,14 @@ class RegisterFragment : Fragment() {
             val email = binding.etEmail.text.toString()
             val password = binding.etPassword.text.toString()
             val username = binding.etUsername.text.toString()
-
             if (email.isNotEmpty() && password.isNotEmpty() && username.isNotEmpty()) {
-                Model.instance.register(email, password, username) { success ->
-                    if (success) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        Model.firebase.register(email, password, username)
+                        Model.ensureLocalProfile()
                         Toast.makeText(requireContext(), "Registration Successful", Toast.LENGTH_SHORT).show()
-                        findNavController().navigate(R.id.action_registerFragment_to_postsFragment) // Or back to login
-                    } else {
+                        findNavController().navigate(R.id.postsFragment)
+                    } catch (e: Exception) {
                         Toast.makeText(requireContext(), "Registration Failed", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -45,7 +47,7 @@ class RegisterFragment : Fragment() {
         }
 
         binding.tvLogin.setOnClickListener {
-            findNavController().navigate(R.id.action_registerFragment_to_loginFragment)
+            findNavController().navigate(R.id.loginFragment)
         }
     }
 
