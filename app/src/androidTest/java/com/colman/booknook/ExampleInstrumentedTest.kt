@@ -1,4 +1,4 @@
-package com.colman.booknook
+package com.booknook.app
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.colman.booknook", appContext.packageName)
+        assertEquals("com.booknook.app", appContext.packageName)
     }
 }

@@ -1,30 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    app:startDestination="@id/loginFragment">
-
-    <fragment
-        android:id="@+id/loginFragment"
-        android:name="com.colman.booknook.ui.auth.LoginFragment"
-        android:label="Login"
-        tools:layout="@layout/fragment_login">
-        <action android:id="@+id/action_loginFragment_to_postsFragment" app:destination="@id/postsFragment" />
-        <action android:id="@+id/action_loginFragment_to_registerFragment" app:destination="@id/registerFragment" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/registerFragment"
-        android:name="com.colman.booknook.ui.auth.RegisterFragment"
-        android:label="Register"
-        tools:layout="@layout/fragment_register">
-        <action android:id="@+id/action_registerFragment_to_postsFragment" app:destination="@id/postsFragment" />
-        <action android:id="@+id/action_registerFragment_to_loginFragment" app:destination="@id/loginFragment" />
-    </fragment>
+    app:startDestination="@id/postsFragment">
 
     <fragment
         android:id="@+id/postsFragment"
-        android:name="com.colman.booknook.ui.posts.PostsFragment"
+        android:name="com.booknook.app.ui.posts.PostsFragment"
         android:label="Posts" >
         <action android:id="@+id/action_posts_to_bookSearch" app:destination="@id/bookSearchFragment" />
         <action android:id="@+id/action_posts_to_wishlist" app:destination="@id/wishlistFragment" />
@@ -36,14 +17,14 @@
 
     <fragment
         android:id="@+id/bookSearchFragment"
-        android:name="com.colman.booknook.ui.books.BookSearchFragment"
+        android:name="com.booknook.app.ui.books.BookSearchFragment"
         android:label="Search Books">
         <action android:id="@+id/action_bookSearch_to_createPost" app:destination="@id/createPostFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/createPostFragment"
-        android:name="com.colman.booknook.ui.posts.CreatePostFragment"
+        android:name="com.booknook.app.ui.posts.CreatePostFragment"
         android:label="Create Post" >
         <argument android:name="bookId" app:argType="string" />
         <argument android:name="bookTitle" app:argType="string" />
@@ -53,7 +34,7 @@
 
     <fragment
         android:id="@+id/postDetailsFragment"
-        android:name="com.colman.booknook.ui.posts.PostDetailsFragment"
+        android:name="com.booknook.app.ui.posts.PostDetailsFragment"
         android:label="Post Details">
         <argument android:name="postId" app:argType="string" />
         <action android:id="@+id/action_details_to_edit" app:destination="@id/editPostFragment" />
@@ -61,14 +42,14 @@
 
     <fragment
         android:id="@+id/editPostFragment"
-        android:name="com.colman.booknook.ui.posts.EditPostFragment"
+        android:name="com.booknook.app.ui.posts.EditPostFragment"
         android:label="Edit Post">
         <argument android:name="postId" app:argType="string" />
     </fragment>
 
     <fragment
         android:id="@+id/myPostsFragment"
-        android:name="com.colman.booknook.ui.posts.MyPostsFragment"
+        android:name="com.booknook.app.ui.posts.MyPostsFragment"
         android:label="My Posts" >
         <action android:id="@+id/action_myPosts_to_edit" app:destination="@id/editPostFragment" />
         <action android:id="@+id/action_myPosts_to_details" app:destination="@id/postDetailsFragment" />
@@ -76,17 +57,17 @@
 
     <fragment
         android:id="@+id/wishlistFragment"
-        android:name="com.colman.booknook.ui.wishlist.WishlistFragment"
+        android:name="com.booknook.app.ui.wishlist.WishlistFragment"
         android:label="Wishlist" />
 
     <fragment
         android:id="@+id/profileFragment"
-        android:name="com.colman.booknook.ui.profile.ProfileFragment"
+        android:name="com.booknook.app.ui.profile.ProfileFragment"
         android:label="Profile" />
 
     <fragment
         android:id="@+id/filtersFragment"
-        android:name="com.colman.booknook.ui.posts.FiltersFragment"
+        android:name="com.booknook.app.ui.posts.FiltersFragment"
         android:label="Search Posts" />
 
 </navigation>
