@@ -66,6 +66,13 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             Toast.makeText(requireContext(), "Added to wishlist", Toast.LENGTH_SHORT).show()
         }
 
+        binding.addReadlistBtn.setOnClickListener {
+            val uid = Model.currentUserId() ?: return@setOnClickListener
+            val post = Model.observePost(postId).value ?: return@setOnClickListener
+            viewLifecycleOwner.lifecycleScope.launch { Model.addToReadlist(uid, Book(post.bookId, post.bookTitle, post.bookAuthor, post.bookThumbnail)) }
+            Toast.makeText(requireContext(), "Added to readlist", Toast.LENGTH_SHORT).show()
+        }
+
         binding.title.setOnLongClickListener {
             val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
             findNavController().navigate(action)

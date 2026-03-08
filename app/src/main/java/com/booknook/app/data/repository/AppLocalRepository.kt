@@ -7,6 +7,7 @@ import com.booknook.app.data.local.entities.*
 class AppLocalRepository(
     private val postDao: PostDao,
     private val wishlistDao: WishlistDao,
+    private val readlistDao: ReadlistDao,
     private val userDao: UserDao,
     private val cachedBookDao: CachedBookDao
 ) {
@@ -23,6 +24,10 @@ class AppLocalRepository(
     fun observeWishlist(userId: String) = wishlistDao.getByUser(userId)
     suspend fun upsertWishlist(item: WishlistEntity) = wishlistDao.upsert(item)
     suspend fun deleteWishlist(key: String) = wishlistDao.deleteByKey(key)
+
+    fun observeReadlist(userId: String) = readlistDao.getByUser(userId)
+    suspend fun upsertReadlist(item: ReadlistEntity) = readlistDao.upsert(item)
+    suspend fun deleteReadlist(key: String) = readlistDao.deleteByKey(key)
 
     fun observeUser() = userDao.get()
     suspend fun upsertUser(user: UserEntity) = userDao.upsert(user)

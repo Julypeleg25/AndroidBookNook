@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/bn_cream"
     android:padding="14dp">
 
     <ImageView
@@ -17,6 +18,7 @@
 
     <TextView
         android:id="@+id/title"
+        android:textColor="@color/bn_brown_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textStyle="bold"
@@ -28,6 +30,7 @@
 
     <TextView
         android:id="@+id/author"
+        android:textColor="@color/bn_secondary_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textSize="13sp"
@@ -49,6 +52,7 @@
 
     <TextView
         android:id="@+id/meta"
+        android:textColor="@color/bn_secondary_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textSize="12sp"

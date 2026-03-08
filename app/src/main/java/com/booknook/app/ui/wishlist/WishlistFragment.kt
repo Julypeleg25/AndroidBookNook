@@ -1,6 +1,6 @@
 package com.booknook.app.ui.wishlist
-import androidx.lifecycle.lifecycleScope
 
+import androidx.lifecycle.lifecycleScope
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -14,22 +14,36 @@ import kotlinx.coroutines.launch
 class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
     private lateinit var binding: FragmentWishlistBinding
-    private lateinit var adapter: WishlistAdapter
+    private lateinit var wishlistAdapter: WishlistAdapter
+    private lateinit var readlistAdapter: ReadlistAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding = FragmentWishlistBinding.bind(view)
 
         val uid = Model.currentUserId() ?: return
 
-        adapter = WishlistAdapter { item ->
+        wishlistAdapter = WishlistAdapter { item ->
             viewLifecycleOwner.lifecycleScope.launch { Model.removeFromWishlist(uid, item.bookId) }
-            Toast.makeText(requireContext(), "Removed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Removed from wishlist", Toast.LENGTH_SHORT).show()
         }
-        binding.recycler.layoutManager = LinearLayoutManager(requireContext())
-        binding.recycler.adapter = adapter
+
+        readlistAdapter = ReadlistAdapter { item ->
+            viewLifecycleOwner.lifecycleScope.launch { Model.removeFromReadlist(uid, item.bookId) }
+            Toast.makeText(requireContext(), "Removed from readlist", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.wishlistRecycler.layoutManager = LinearLayoutManager(requireContext())
+        binding.wishlistRecycler.adapter = wishlistAdapter
+
+        binding.readlistRecycler.layoutManager = LinearLayoutManager(requireContext())
+        binding.readlistRecycler.adapter = readlistAdapter
 
         Model.observeWishlist(uid).observe(viewLifecycleOwner) { list ->
-            adapter.submit(list)
+            wishlistAdapter.submit(list)
+        }
+
+        Model.observeReadlist(uid).observe(viewLifecycleOwner) { list ->
+            readlistAdapter.submit(list)
         }
     }
 }

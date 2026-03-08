@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bn_beige"
     android:padding="20dp">
 
     <TextView
@@ -11,6 +12,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="BookNook"
+        android:textColor="@color/bn_brown_text"
         android:textSize="28sp"
         android:textStyle="bold"
         app:layout_constraintTop_toTopOf="parent"
@@ -21,6 +23,7 @@
         android:id="@+id/emailInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Email"
         android:inputType="textEmailAddress"
         app:layout_constraintTop_toBottomOf="@id/title"
@@ -32,6 +35,7 @@
         android:id="@+id/passwordInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Password"
         android:inputType="textPassword"
         app:layout_constraintTop_toBottomOf="@id/emailInput"
@@ -43,6 +47,7 @@
         android:id="@+id/usernameInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Username (register only)"
         android:inputType="textPersonName"
         android:visibility="gone"
@@ -55,7 +60,9 @@
         android:id="@+id/loginBtn"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:text="Login"
+        android:textColor="@color/white"
         app:layout_constraintTop_toBottomOf="@id/usernameInput"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -66,7 +73,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="No account? Register"
-        android:textColor="@android:color/holo_blue_dark"
+        android:textColor="@color/bn_pink_dark"
         app:layout_constraintTop_toBottomOf="@id/loginBtn"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="16dp"/>
@@ -79,5 +86,4 @@
         app:layout_constraintTop_toBottomOf="@id/registerLink"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="18dp"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

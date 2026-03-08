@@ -8,12 +8,13 @@ import com.booknook.app.data.local.dao.*
 import com.booknook.app.data.local.entities.*
 
 @Database(
-    entities = [PostEntity::class, WishlistEntity::class, UserEntity::class, CachedBookEntity::class],
-    version = 1
+    entities = [PostEntity::class, WishlistEntity::class, ReadlistEntity::class, UserEntity::class, CachedBookEntity::class],
+    version = 2
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
     abstract fun wishlistDao(): WishlistDao
+    abstract fun readlistDao(): ReadlistDao
     abstract fun userDao(): UserDao
     abstract fun cachedBookDao(): CachedBookDao
 
@@ -22,6 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "booknook.db")
+                    .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
             }

@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import com.booknook.app.data.local.AppDatabase
 import com.booknook.app.data.local.entities.PostEntity
+import com.booknook.app.data.local.entities.ReadlistEntity
 import com.booknook.app.data.local.entities.UserEntity
 import com.booknook.app.data.local.entities.WishlistEntity
 import com.booknook.app.data.repository.AppLocalRepository
@@ -25,7 +26,13 @@ object Model {
 
     fun init(context: Context) {
         val db = AppDatabase.getInstance(context)
-        local = AppLocalRepository(db.postDao(), db.wishlistDao(), db.userDao(), db.cachedBookDao())
+        local = AppLocalRepository(
+            db.postDao(),
+            db.wishlistDao(),
+            db.readlistDao(),
+            db.userDao(),
+            db.cachedBookDao()
+        )
     }
 
     fun currentUserId(): String? = firebase.currentUserId()
@@ -132,7 +139,7 @@ object Model {
         }
     }
 
-    fun observeWishlist(userId: String) = local.observeWishlist(userId)
+    fun observeWishlist(userId: String): LiveData<List<WishlistEntity>> = local.observeWishlist(userId)
 
     suspend fun addToWishlist(userId: String, book: Book) {
         val key = "$userId|${book.id}"
@@ -155,6 +162,32 @@ object Model {
         val key = "$userId|$bookId"
         withContext(Dispatchers.IO) {
             local.deleteWishlist(key)
+        }
+    }
+
+    fun observeReadlist(userId: String): LiveData<List<ReadlistEntity>> = local.observeReadlist(userId)
+
+    suspend fun addToReadlist(userId: String, book: Book) {
+        val key = "$userId|${book.id}"
+        withContext(Dispatchers.IO) {
+            local.upsertReadlist(
+                ReadlistEntity(
+                    key = key,
+                    userId = userId,
+                    bookId = book.id,
+                    title = book.title,
+                    author = book.author,
+                    thumbnail = book.thumbnail,
+                    addedAt = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    suspend fun removeFromReadlist(userId: String, bookId: String) {
+        val key = "$userId|$bookId"
+        withContext(Dispatchers.IO) {
+            local.deleteReadlist(key)
         }
     }
 }

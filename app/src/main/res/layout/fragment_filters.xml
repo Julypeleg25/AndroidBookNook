@@ -4,12 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bn_beige"
     android:padding="12dp">
 
     <EditText
         android:id="@+id/titleInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Book title contains..."
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -19,6 +21,7 @@
         android:id="@+id/authorInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Author contains..."
         app:layout_constraintTop_toBottomOf="@id/titleInput"
         app:layout_constraintStart_toStartOf="parent"
@@ -29,6 +32,7 @@
         android:id="@+id/minRatingInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Min rating (0-5)"
         android:inputType="number"
         app:layout_constraintTop_toBottomOf="@id/authorInput"
@@ -40,6 +44,7 @@
         android:id="@+id/minCommentsInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:hint="Min comments"
         android:inputType="number"
         app:layout_constraintTop_toBottomOf="@id/minRatingInput"
@@ -51,7 +56,9 @@
         android:id="@+id/applyBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/bn_orange"
         android:text="Apply"
+        android:textColor="@color/white"
         app:layout_constraintTop_toBottomOf="@id/minCommentsInput"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="10dp"/>
@@ -65,5 +72,4 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="10dp"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
