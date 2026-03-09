@@ -2,19 +2,22 @@ package com.booknook.app.ui.books
 
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentBookSearchBinding
-import com.booknook.app.model.Model
-import kotlinx.coroutines.launch
+import com.booknook.app.ui.posts.CreatePostViewModel
+import com.google.android.material.snackbar.Snackbar
 
 class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
-    private lateinit var binding: FragmentBookSearchBinding
+    private var _binding: FragmentBookSearchBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: CreatePostViewModel by viewModels()
+    
     private val adapter = BookAdapter { book ->
         val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
             bookId = book.id,
@@ -26,30 +29,49 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentBookSearchBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentBookSearchBinding.bind(view)
+        
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
 
+        observeViewModel()
+
         binding.doSearchBtn.setOnClickListener {
             val q = binding.queryInput.text.toString().trim()
-            if (q.isEmpty()) return@setOnClickListener
-
-            setLoading(true)
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    val books = Model.searchBooks(q)
-                    adapter.submit(books)
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Search failed", Toast.LENGTH_SHORT).show()
-                } finally {
-                    setLoading(false)
-                }
+            if (q.isNotEmpty()) {
+                viewModel.searchBooks(q)
+            } else {
+                Snackbar.make(binding.root, "Search query is empty", Snackbar.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun setLoading(isLoading: Boolean) {
-        binding.loading.visibility = if (isLoading) View.VISIBLE else View.GONE
-        binding.doSearchBtn.isEnabled = !isLoading
+    private fun observeViewModel() {
+        viewModel.searchResults.observe(viewLifecycleOwner) { books ->
+            adapter.submitList(books)
+        }
+
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loading.isVisible = isLoading
+            if (isLoading) {
+                binding.doSearchBtn.isEnabled = false
+            } else {
+                binding.doSearchBtn.postDelayed({
+                    _binding?.let { it.doSearchBtn.isEnabled = true }
+                }, 1000)
+            }
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

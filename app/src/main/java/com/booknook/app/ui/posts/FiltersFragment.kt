@@ -2,29 +2,34 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentFiltersBinding
-import com.booknook.app.model.Model
 
 class FiltersFragment : Fragment(R.layout.fragment_filters) {
 
-    private lateinit var binding: FragmentFiltersBinding
-    private val resultsAdapter = PostsAdapter { postId ->
-        findNavController().navigate(
-            R.id.postDetailsFragment,
-            bundleOf("postId" to postId)
-        )
-    }
+    private var _binding: FragmentFiltersBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: FiltersViewModel by viewModels()
+    
+    private val resultsAdapter = PostsAdapter(
+        onClick = { postId ->
+            val action = FiltersFragmentDirections.actionFiltersToDetails(postId)
+            findNavController().navigate(action)
+        }
+    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentFiltersBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentFiltersBinding.bind(view)
 
         binding.resultsRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.resultsRecycler.adapter = resultsAdapter
+
+        observeViewModel()
 
         binding.applyBtn.setOnClickListener {
             val title = binding.titleInput.text.toString().trim().ifEmpty { null }
@@ -32,9 +37,18 @@ class FiltersFragment : Fragment(R.layout.fragment_filters) {
             val minRating = binding.minRatingInput.text.toString().trim().toIntOrNull()
             val minComments = binding.minCommentsInput.text.toString().trim().toIntOrNull()
 
-            Model.searchPosts(title, author, minRating, minComments).observe(viewLifecycleOwner) { list ->
-                resultsAdapter.submit(list)
-            }
+            viewModel.applyFilters(title, author, minRating, minComments)
         }
+    }
+
+    private fun observeViewModel() {
+        viewModel.filteredPosts.observe(viewLifecycleOwner) { list ->
+            resultsAdapter.submitList(list)
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }
