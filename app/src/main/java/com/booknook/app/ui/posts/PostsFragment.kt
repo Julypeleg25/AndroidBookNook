@@ -2,49 +2,58 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostsBinding
 import com.booknook.app.model.Model
-import kotlinx.coroutines.launch
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
 
-    private lateinit var binding: FragmentPostsBinding
-    private val adapter = PostsAdapter { postId ->
-        val action = PostsFragmentDirections.actionPostsToDetails(postId)
-        findNavController().navigate(action)
-    }
+    private var _binding: FragmentPostsBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: PostsViewModel by viewModels()
+    
+    private val adapter = PostsAdapter(
+        onClick = { postId ->
+            val action = PostsFragmentDirections.actionPostsToDetails(postId)
+            findNavController().navigate(action)
+        }
+    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentPostsBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        
+        if (Model.currentUserId() == null) {
+            findNavController().navigate(R.id.loginFragment)
+            return
+        }
+
+        _binding = FragmentPostsBinding.bind(view)
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
 
-        binding.newPostBtn.setOnClickListener {
-            findNavController().navigate(R.id.action_posts_to_bookSearch)
-        }
-        binding.searchBtn.setOnClickListener {
-            findNavController().navigate(R.id.action_posts_to_filters)
-        }
-        binding.wishlistBtn.setOnClickListener {
-            findNavController().navigate(R.id.action_posts_to_wishlist)
-        }
-        binding.profileBtn.setOnClickListener {
-            findNavController().navigate(R.id.action_posts_to_profile)
+        observeViewModel()
+    }
+
+    private fun observeViewModel() {
+        viewModel.posts.observe(viewLifecycleOwner) { list ->
+            adapter.submitList(list)
+            binding.emptyText.isVisible = list.isEmpty()
         }
 
-        Model.observePosts().observe(viewLifecycleOwner) { list ->
-            adapter.submit(list)
-            binding.emptyText.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            // If there's a loading progress bar in fragment_posts.xml
+            // binding.pbLoading.isVisible = isLoading
         }
+    }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            try { Model.refreshPosts() } catch (_: Exception) {}
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

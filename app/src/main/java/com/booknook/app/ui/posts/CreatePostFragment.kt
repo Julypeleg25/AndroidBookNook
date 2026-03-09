@@ -3,33 +3,41 @@ package com.booknook.app.ui.posts
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.booknook.app.domain.Book
-import com.booknook.app.model.Model
-import kotlinx.coroutines.launch
+import com.google.android.material.snackbar.Snackbar
+import com.squareup.picasso.Picasso
 
 class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
-    private lateinit var binding: FragmentCreatePostBinding
+    private var _binding: FragmentCreatePostBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: CreatePostViewModel by viewModels()
     private var pickedImage: Uri? = null
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        pickedImage = uri
-        if (uri != null) Toast.makeText(requireContext(), "Image selected", Toast.LENGTH_SHORT).show()
+        uri?.let {
+            pickedImage = it
+            binding.imagePreview.isVisible = true
+            Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentCreatePostBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentCreatePostBinding.bind(view)
 
         val args = CreatePostFragmentArgs.fromBundle(requireArguments())
         binding.bookTitle.text = args.bookTitle
         binding.bookAuthor.text = args.bookAuthor
+
+        observeViewModel()
 
         binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
 
@@ -37,29 +45,38 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
             if (rating <= 0 || review.isEmpty()) {
-                Toast.makeText(requireContext(), "Rating and review required", Toast.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "Rating and review required", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val book = Book(args.bookId, args.bookTitle, args.bookAuthor, args.bookThumbnail)
+            viewModel.createPost(book, rating, review, pickedImage)
+        }
+    }
 
-            setLoading(true)
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    Model.createPost(book, rating, review, pickedImage)
-                    Toast.makeText(requireContext(), "Posted!", Toast.LENGTH_SHORT).show()
-                    findNavController().popBackStack()
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Publish failed", Toast.LENGTH_SHORT).show()
-                } finally {
-                    setLoading(false)
-                }
+    private fun observeViewModel() {
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loading.isVisible = isLoading
+            binding.publishBtn.isEnabled = !isLoading
+        }
+
+        viewModel.saveSuccess.observe(viewLifecycleOwner) { success ->
+            if (success) {
+                Snackbar.make(binding.root, "Posted successfully!", Snackbar.LENGTH_SHORT).show()
+                viewModel.resetSaveSuccess()
+                findNavController().popBackStack()
+            }
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun setLoading(isLoading: Boolean) {
-        binding.loading.visibility = if (isLoading) View.VISIBLE else View.GONE
-        binding.publishBtn.isEnabled = !isLoading
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

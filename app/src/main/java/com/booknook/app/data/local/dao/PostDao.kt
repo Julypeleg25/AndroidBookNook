@@ -18,6 +18,9 @@ interface PostDao {
     @Query("SELECT * FROM posts WHERE id = :postId LIMIT 1")
     fun getById(postId: String): LiveData<PostEntity?>
 
+    @Query("SELECT * FROM posts WHERE id = :postId LIMIT 1")
+    suspend fun getByIdSync(postId: String): PostEntity?
+
     @Query("""SELECT * FROM posts
         WHERE (:title IS NULL OR bookTitle LIKE '%' || :title || '%')
           AND (:author IS NULL OR bookAuthor LIKE '%' || :author || '%')
