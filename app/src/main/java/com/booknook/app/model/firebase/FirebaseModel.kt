@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import java.util.UUID
 
 class FirebaseModel {
@@ -22,13 +23,17 @@ class FirebaseModel {
     fun logout() { auth.signOut() }
 
     suspend fun register(email: String, password: String, username: String) {
-        val res = auth.createUserWithEmailAndPassword(email, password).await()
-        val uid = res.user?.uid ?: throw IllegalStateException("Registration failed")
-        db.collection("users").document(uid).set(mapOf(
-            "username" to username,
-            "email" to email,
-            "avatarUrl" to null
-        )).await()
+        val res = withTimeout(15000) {
+            auth.createUserWithEmailAndPassword(email, password).await()
+        }
+        val uid = res.user?.uid ?: throw IllegalStateException("Registration failed: No UID")
+        withTimeout(10000) {
+            db.collection("users").document(uid).set(mapOf(
+                "username" to username,
+                "email" to email,
+                "avatarUrl" to null
+            )).await()
+        }
     }
 
     suspend fun login(email: String, password: String) {

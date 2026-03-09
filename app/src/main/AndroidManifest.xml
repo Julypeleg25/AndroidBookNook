@@ -10,24 +10,17 @@
         android:label="BookNook"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BookNook">
+        android:theme="@style/Theme.BookNook"
+        android:usesCleartextTraffic="true">
 
         <activity
-            android:name="com.booknook.app.ui.auth.LoginActivity"
+            android:name="com.booknook.app.ui.main.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity 
-            android:name="com.booknook.app.ui.auth.RegisterActivity" 
-            android:exported="false"/>
-            
-        <activity 
-            android:name="com.booknook.app.ui.main.MainActivity" 
-            android:exported="false"/>
 
     </application>
 
