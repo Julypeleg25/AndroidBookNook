@@ -11,13 +11,13 @@ import kotlinx.coroutines.launch
 
 class FiltersViewModel : ViewModel() {
 
-    private val query = MutableLiveData<FilterQuery>()
+    private val query = MutableLiveData(FilterQuery(null, null, null, null))
 
     init {
-        refresh()
+        refreshIfNeeded()
     }
 
-    fun refresh() {
+    private fun refreshIfNeeded() {
         viewModelScope.launch {
             try {
                 Model.refreshPosts()

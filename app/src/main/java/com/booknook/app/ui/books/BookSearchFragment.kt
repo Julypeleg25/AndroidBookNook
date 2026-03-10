@@ -9,15 +9,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentBookSearchBinding
-import com.booknook.app.ui.posts.CreatePostViewModel
 import com.google.android.material.snackbar.Snackbar
 
 class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
     private var _binding: FragmentBookSearchBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: CreatePostViewModel by viewModels()
-    
+    private val viewModel: BookSearchViewModel by viewModels()
+
     private val adapter = BookAdapter { book ->
         val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
             bookId = book.id,
@@ -31,7 +30,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentBookSearchBinding.bind(view)
-        
+
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
 
@@ -42,7 +41,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
             if (q.isNotEmpty()) {
                 viewModel.searchBooks(q)
             } else {
-                Snackbar.make(binding.root, "Search query is empty", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "Enter a search query", Snackbar.LENGTH_SHORT).show()
             }
         }
     }

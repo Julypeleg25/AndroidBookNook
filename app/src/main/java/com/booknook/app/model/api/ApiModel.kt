@@ -11,14 +11,11 @@ private interface GoogleBooksApi {
     @GET("volumes")
     suspend fun search(
         @Query("q") q: String,
-        @Query("maxResults") maxResults: Int = 20,
-        @Query("key") apiKey: String? = null
+        @Query("maxResults") maxResults: Int = 20
     ): SearchResponseDto
 }
 
 class ApiModel {
-
-    private val GOOGLE_BOOKS_API_KEY = "AIzaSyANFioq_qMn6WNL-CyJshKHboYRhi1CRCA"
 
     private val cache = mutableMapOf<String, List<Book>>()
 
@@ -32,10 +29,11 @@ class ApiModel {
 
     suspend fun searchBooks(query: String): List<Book> {
         val q = query.lowercase().trim()
+        if (q.isBlank()) return emptyList()
+
         cache[q]?.let { return it }
 
-        val keyParam = if (GOOGLE_BOOKS_API_KEY.isNotEmpty()) GOOGLE_BOOKS_API_KEY else null
-        val res = api.search(q, apiKey = keyParam)
+        val res = api.search(q)
         val items = res.items ?: emptyList()
         val books = items.map {
             Book(
