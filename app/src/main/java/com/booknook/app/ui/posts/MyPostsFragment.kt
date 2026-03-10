@@ -9,7 +9,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentMyPostsBinding
-import com.booknook.app.model.Model
 import com.google.android.material.snackbar.Snackbar
 
 class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
@@ -35,12 +34,6 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        if (Model.currentUserId() == null) {
-            findNavController().navigate(R.id.loginFragment)
-            return
-        }
-
         _binding = FragmentMyPostsBinding.bind(view)
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())

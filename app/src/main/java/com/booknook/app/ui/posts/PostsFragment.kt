@@ -9,14 +9,13 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostsBinding
-import com.booknook.app.model.Model
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
 
     private var _binding: FragmentPostsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: PostsViewModel by viewModels()
-    
+
     private val adapter = PostsAdapter(
         onClick = { postId ->
             val action = PostsFragmentDirections.actionPostsToDetails(postId)
@@ -26,16 +25,14 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        if (Model.currentUserId() == null) {
-            findNavController().navigate(R.id.loginFragment)
-            return
-        }
-
         _binding = FragmentPostsBinding.bind(view)
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
+
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.refreshPosts()
+        }
 
         observeViewModel()
     }
@@ -47,8 +44,8 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
         }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            // If there's a loading progress bar in fragment_posts.xml
-            // binding.pbLoading.isVisible = isLoading
+            binding.pbLoading.isVisible = isLoading
+            if (!isLoading) binding.swipeRefresh.isRefreshing = false
         }
     }
 

@@ -47,8 +47,6 @@ class PostsAdapter(
             binding.rating.rating = post.rating.toFloat()
             binding.meta.text = "⭐ ${post.rating}  •  ${post.commentsCount} comments  •  ${post.likesCount} likes"
             
-            // Task 2: Add book pictures from Google Books API everywhere relevant
-            // Use Picasso correctly with placeholder
             Picasso.get()
                 .load(post.bookThumbnail)
                 .placeholder(R.drawable.book_placeholder)
