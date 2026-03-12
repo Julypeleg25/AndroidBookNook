@@ -1,6 +1,5 @@
 package com.booknook.app.ui.profile
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -11,7 +10,6 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentProfileBinding
-import com.booknook.app.model.Model
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 
@@ -31,12 +29,6 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        if (Model.currentUserId() == null) {
-            findNavController().navigate(R.id.loginFragment)
-            return
-        }
-
         _binding = FragmentProfileBinding.bind(view)
 
         observeViewModel()
@@ -57,7 +49,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
         binding.logoutBtn.setOnClickListener {
             viewModel.logout()
-            findNavController().navigate(R.id.loginFragment)
+            findNavController().navigate(R.id.action_global_logout)
         }
     }
 
@@ -67,7 +59,13 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 binding.usernameInput.setText(it.username)
                 binding.emailInput.setText(it.email)
                 if (selectedAvatarUri == null && !it.avatarUrl.isNullOrBlank()) {
-                    Picasso.get().load(it.avatarUrl).fit().centerCrop().into(binding.avatarImage)
+                    Picasso.get()
+                        .load(it.avatarUrl)
+                        .placeholder(R.drawable.ic_launcher_foreground)
+                        .error(R.drawable.ic_launcher_foreground)
+                        .fit()
+                        .centerCrop()
+                        .into(binding.avatarImage)
                 }
             }
         }

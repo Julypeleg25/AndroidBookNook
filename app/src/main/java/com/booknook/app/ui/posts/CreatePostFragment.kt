@@ -11,6 +11,7 @@ import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.booknook.app.domain.Book
+import com.booknook.app.ui.auth.Event
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 
@@ -24,7 +25,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             pickedImage = it
-            binding.imagePreview.isVisible = true
+            binding.imageCard.isVisible = true
             Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
         }
     }
@@ -60,11 +61,13 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
             binding.publishBtn.isEnabled = !isLoading
         }
 
-        viewModel.saveSuccess.observe(viewLifecycleOwner) { success ->
-            if (success) {
-                Snackbar.make(binding.root, "Posted successfully!", Snackbar.LENGTH_SHORT).show()
-                viewModel.resetSaveSuccess()
-                findNavController().popBackStack()
+        viewModel.saveSuccess.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { success ->
+                if (success) {
+                    com.booknook.app.util.Logger.d("CreatePost", "Consuming success event - Navigating back")
+                    Snackbar.make(binding.root, "Posted successfully!", Snackbar.LENGTH_SHORT).show()
+                    findNavController().popBackStack()
+                }
             }
         }
 

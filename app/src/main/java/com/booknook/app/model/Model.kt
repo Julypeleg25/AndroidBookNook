@@ -64,7 +64,7 @@ object Model {
         }
     }
 
-    suspend fun searchBooks(query: String): List<Book> = api.searchBooks(query)
+    suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> = api.searchBooks(query, startIndex)
 
     fun observePosts(): LiveData<List<PostEntity>> = local.observePosts()
     fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = local.observeMyPosts(userId)
@@ -74,9 +74,17 @@ object Model {
     fun searchPosts(title: String?, author: String?, minRating: Int?, minComments: Int?) =
         local.searchPosts(title, author, minRating, minComments)
 
-    suspend fun refreshPosts() {
+    fun searchPostsByQuery(query: String) = local.searchPostsByQuery(query)
+
+    suspend fun isOwnPost(postId: String): Boolean {
+        val uid = currentUserId() ?: return false
+        val post = withContext(Dispatchers.IO) { local.getPost(postId) }
+        return post?.userId == uid
+    }
+
+    suspend fun refreshPosts(force: Boolean = false) {
         val now = System.currentTimeMillis()
-        if (now - lastRefreshTime < REFRESH_INTERVAL) return
+        if (!force && now - lastRefreshTime < REFRESH_INTERVAL) return
 
         val posts = firebase.fetchAllPosts()
         withContext(Dispatchers.IO) {
@@ -132,70 +140,123 @@ object Model {
     }
 
     suspend fun toggleLike(postId: String) {
-        firebase.toggleLike(postId)
-        val updated = firebase.getPost(postId) ?: return
-        withContext(Dispatchers.IO) {
-            local.upsertPost(updated)
+        val uid = currentUserId() ?: return
+        val post = withContext(Dispatchers.IO) { local.getPost(postId) } ?: return
+        
+        if (post.userId == uid) {
+            com.booknook.app.util.Logger.d("Likes", "User $uid attempted to like their own post $postId - Blocked.")
+            return
+        }
+
+        // Optimistic update
+        val newIsLiked = !post.isLikedByUser
+        val newCount = if (newIsLiked) post.likesCount + 1 else (post.likesCount - 1).coerceAtLeast(0)
+        val optimisticPost = post.copy(isLikedByUser = newIsLiked, likesCount = newCount)
+        
+        withContext(Dispatchers.IO) { local.upsertPost(optimisticPost) }
+        com.booknook.app.util.Logger.d("Likes", "Optimistic update for $postId: Liked=$newIsLiked, Count=$newCount")
+
+        try {
+            firebase.toggleLike(postId)
+            
+            // Sync again with network source of truth
+            val fresh = firebase.getPost(postId)
+            if (fresh != null) {
+                withContext(Dispatchers.IO) { local.upsertPost(fresh) }
+                com.booknook.app.util.Logger.d("Likes", "Backend sync successful for $postId. Final count: ${fresh.likesCount}")
+            }
+        } catch (e: Exception) {
+            com.booknook.app.util.Logger.e("Likes", "Backend sync failed for $postId. Reverting local state.", e)
+            // Revert optimistic update
+            withContext(Dispatchers.IO) { local.upsertPost(post) }
+            throw e
         }
     }
 
     suspend fun addComment(postId: String, text: String) {
-        firebase.addComment(postId, text)
-        val updated = firebase.getPost(postId) ?: return
-        withContext(Dispatchers.IO) {
-            local.upsertPost(updated)
+        val post = withContext(Dispatchers.IO) { local.getPost(postId) } ?: return
+
+        // Optimistic update
+        val optimisticPost = post.copy(commentsCount = post.commentsCount + 1)
+        withContext(Dispatchers.IO) { local.upsertPost(optimisticPost) }
+        com.booknook.app.util.Logger.d("Comments", "Optimistic count update for $postId: ${optimisticPost.commentsCount}")
+
+        try {
+            firebase.addComment(postId, text)
+            // Sync with network source of truth
+            val fresh = firebase.getPost(postId)
+            if (fresh != null) {
+                withContext(Dispatchers.IO) { local.upsertPost(fresh) }
+            }
+        } catch (e: Exception) {
+            com.booknook.app.util.Logger.e("Comments", "Comment sync failed", e)
+            // Revert optimistic update
+            withContext(Dispatchers.IO) { local.upsertPost(post) }
+            throw e
         }
     }
 
     fun observeWishlist(userId: String): LiveData<List<WishlistEntity>> = local.observeWishlist(userId)
+    fun observeWishlistExists(userId: String, bookId: String): LiveData<Boolean> = 
+        local.observeWishlistExists("$userId|$bookId")
 
-    suspend fun addToWishlist(userId: String, book: Book) {
+    suspend fun toggleWishlist(userId: String, book: Book): Boolean {
         val key = "$userId|${book.id}"
-        withContext(Dispatchers.IO) {
-            local.upsertWishlist(
-                WishlistEntity(
-                    key = key,
-                    userId = userId,
-                    bookId = book.id,
-                    title = book.title,
-                    author = book.author,
-                    thumbnail = book.thumbnail,
-                    addedAt = System.currentTimeMillis()
+        return withContext(Dispatchers.IO) {
+            if (local.existsInWishlist(key)) {
+                local.deleteWishlist(key)
+                false
+            } else {
+                local.upsertWishlist(
+                    WishlistEntity(
+                        key = key,
+                        userId = userId,
+                        bookId = book.id,
+                        title = book.title,
+                        author = book.author,
+                        thumbnail = book.thumbnail,
+                        addedAt = System.currentTimeMillis()
+                    )
                 )
-            )
+                true
+            }
         }
     }
 
     suspend fun removeFromWishlist(userId: String, bookId: String) {
         val key = "$userId|$bookId"
-        withContext(Dispatchers.IO) {
-            local.deleteWishlist(key)
-        }
+        withContext(Dispatchers.IO) { local.deleteWishlist(key) }
     }
 
     fun observeReadlist(userId: String): LiveData<List<ReadlistEntity>> = local.observeReadlist(userId)
+    fun observeReadlistExists(userId: String, bookId: String): LiveData<Boolean> = 
+        local.observeReadlistExists("$userId|$bookId")
 
-    suspend fun addToReadlist(userId: String, book: Book) {
+    suspend fun toggleReadlist(userId: String, book: Book): Boolean {
         val key = "$userId|${book.id}"
-        withContext(Dispatchers.IO) {
-            local.upsertReadlist(
-                ReadlistEntity(
-                    key = key,
-                    userId = userId,
-                    bookId = book.id,
-                    title = book.title,
-                    author = book.author,
-                    thumbnail = book.thumbnail,
-                    addedAt = System.currentTimeMillis()
+        return withContext(Dispatchers.IO) {
+            if (local.existsInReadlist(key)) {
+                local.deleteReadlist(key)
+                false
+            } else {
+                local.upsertReadlist(
+                    ReadlistEntity(
+                        key = key,
+                        userId = userId,
+                        bookId = book.id,
+                        title = book.title,
+                        author = book.author,
+                        thumbnail = book.thumbnail,
+                        addedAt = System.currentTimeMillis()
+                    )
                 )
-            )
+                true
+            }
         }
     }
 
     suspend fun removeFromReadlist(userId: String, bookId: String) {
         val key = "$userId|$bookId"
-        withContext(Dispatchers.IO) {
-            local.deleteReadlist(key)
-        }
+        withContext(Dispatchers.IO) { local.deleteReadlist(key) }
     }
 }

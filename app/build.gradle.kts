@@ -22,6 +22,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -67,6 +68,9 @@ dependencies {
 
     // Images
     implementation(libs.picasso)
+
+    // SwipeRefresh
+    implementation(libs.androidx.swiperefreshlayout)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -36,11 +36,11 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
         }
 
         binding.addWishlistBtn.setOnClickListener {
-            viewModel.addToWishlist(postId)
+            viewModel.toggleWishlist(postId)
         }
 
         binding.addReadlistBtn.setOnClickListener {
-            viewModel.addToReadlist(postId)
+            viewModel.toggleReadlist(postId)
         }
 
         binding.title.setOnLongClickListener {
@@ -51,6 +51,13 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
     }
 
     private fun observeViewModel() {
+        viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
+            binding.likeBtn.isEnabled = !isProcessing
+            binding.addWishlistBtn.isEnabled = !isProcessing
+            binding.addReadlistBtn.isEnabled = !isProcessing
+            binding.addCommentBtn.isEnabled = !isProcessing
+        }
+
         viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
             if (post == null) return@observe
 
@@ -59,6 +66,27 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             binding.rating.rating = post.rating.toFloat()
             binding.review.text = post.review
             binding.meta.text = "${post.likesCount} likes • ${post.commentsCount} comments"
+
+            val isOwnPost = post.userId == Model.currentUserId()
+            val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+            binding.likeBtn.setIconResource(likeIcon)
+            
+            if (isOwnPost) {
+                binding.likeBtn.isEnabled = false
+                binding.likeBtn.alpha = 0.5f
+            } else {
+                binding.likeBtn.alpha = 1.0f
+            }
+
+            viewModel.observeWishlist(post.bookId).observe(viewLifecycleOwner) { isWishlisted ->
+                val icon = if (isWishlisted) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline
+                binding.addWishlistBtn.setIconResource(icon)
+            }
+
+            viewModel.observeReadlist(post.bookId).observe(viewLifecycleOwner) { isReadlisted ->
+                val icon = if (isReadlisted) R.drawable.ic_check_circle_filled else R.drawable.ic_check_circle_outline
+                binding.addReadlistBtn.setIconResource(icon)
+            }
 
             Picasso.get()
                 .load(post.imageUrl ?: post.bookThumbnail)

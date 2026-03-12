@@ -29,6 +29,13 @@ interface PostDao {
         ORDER BY createdAt DESC""")
     fun search(title: String?, author: String?, minRating: Int?, minComments: Int?): LiveData<List<PostEntity>>
 
+    @Query("""SELECT * FROM posts
+        WHERE bookTitle LIKE '%' || :query || '%'
+           OR bookAuthor LIKE '%' || :query || '%'
+           OR review LIKE '%' || :query || '%'
+        ORDER BY createdAt DESC""")
+    fun searchByQuery(query: String): LiveData<List<PostEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(post: PostEntity)
 

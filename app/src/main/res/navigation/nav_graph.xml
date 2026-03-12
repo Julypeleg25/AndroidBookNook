@@ -1,6 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
     app:startDestination="@id/loginFragment">
+
+    <!-- Global action for logout with backstack clearing -->
+    <action
+        android:id="@+id/action_global_logout"
+        app:destination="@id/loginFragment"
+        app:popUpTo="@id/nav_graph"
+        app:popUpToInclusive="true" />
 
     <fragment
         android:id="@+id/loginFragment"
@@ -30,11 +39,10 @@
     <fragment
         android:id="@+id/postsFragment"
         android:name="com.booknook.app.ui.posts.PostsFragment"
-        android:label="Posts" >
+        android:label="Feed">
         <action android:id="@+id/action_posts_to_bookSearch" app:destination="@id/bookSearchFragment" />
         <action android:id="@+id/action_posts_to_wishlist" app:destination="@id/wishlistFragment" />
         <action android:id="@+id/action_posts_to_profile" app:destination="@id/profileFragment" />
-        <action android:id="@+id/action_posts_to_filters" app:destination="@id/filtersFragment" />
         <action android:id="@+id/action_posts_to_details" app:destination="@id/postDetailsFragment" />
         <action android:id="@+id/action_posts_to_myPosts" app:destination="@id/myPostsFragment" />
     </fragment>
@@ -49,7 +57,7 @@
     <fragment
         android:id="@+id/createPostFragment"
         android:name="com.booknook.app.ui.posts.CreatePostFragment"
-        android:label="Create Post" >
+        android:label="Create Post">
         <argument android:name="bookId" app:argType="string" />
         <argument android:name="bookTitle" app:argType="string" />
         <argument android:name="bookAuthor" app:argType="string" />
@@ -74,7 +82,7 @@
     <fragment
         android:id="@+id/myPostsFragment"
         android:name="com.booknook.app.ui.posts.MyPostsFragment"
-        android:label="My Posts" >
+        android:label="My Posts">
         <action android:id="@+id/action_myPosts_to_edit" app:destination="@id/editPostFragment" />
         <action android:id="@+id/action_myPosts_to_details" app:destination="@id/postDetailsFragment" />
     </fragment>
@@ -88,15 +96,5 @@
         android:id="@+id/profileFragment"
         android:name="com.booknook.app.ui.profile.ProfileFragment"
         android:label="Profile" />
-
-    <fragment
-        android:id="@+id/filtersFragment"
-        android:name="com.booknook.app.ui.posts.FiltersFragment"
-        android:label="Search Posts" >
-
-        <action
-            android:id="@+id/action_filters_to_details"
-            app:destination="@id/postDetailsFragment" />
-    </fragment>
 
 </navigation>

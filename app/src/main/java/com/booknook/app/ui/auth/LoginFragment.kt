@@ -21,12 +21,6 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentLoginBinding.bind(view)
 
-        // Check if already logged in
-        if (Model.currentUserId() != null) {
-            navigateToPosts()
-            return
-        }
-
         observeViewModel()
 
         binding.btnLogin.setOnClickListener {
@@ -51,15 +45,14 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             setLoading(isLoading)
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
-                viewModel.resetError()
+        viewModel.error.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { error ->
+                Snackbar.make(binding.root, error, Snackbar.LENGTH_SHORT).show()
             }
         }
 
-        viewModel.loginSuccess.observe(viewLifecycleOwner) { success ->
-            if (success) {
+        viewModel.loginSuccess.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let {
                 Snackbar.make(binding.root, "Welcome back!", Snackbar.LENGTH_SHORT).show()
                 navigateToPosts()
             }

@@ -21,5 +21,6 @@ data class PostEntity(
     val imageUrl: String? = null,
     val createdAt: Long = 0,
     val likesCount: Int = 0,
-    val commentsCount: Int = 0
+    val commentsCount: Int = 0,
+    val isLikedByUser: Boolean = false
 )

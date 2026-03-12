@@ -9,7 +9,7 @@ import com.booknook.app.data.local.entities.*
 
 @Database(
     entities = [PostEntity::class, WishlistEntity::class, ReadlistEntity::class, UserEntity::class, CachedBookEntity::class],
-    version = 2
+    version = 3
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
