@@ -45,6 +45,7 @@
         <action android:id="@+id/action_posts_to_profile" app:destination="@id/profileFragment" />
         <action android:id="@+id/action_posts_to_details" app:destination="@id/postDetailsFragment" />
         <action android:id="@+id/action_posts_to_myPosts" app:destination="@id/myPostsFragment" />
+        <action android:id="@+id/action_posts_to_edit" app:destination="@id/editPostFragment" />
     </fragment>
 
     <fragment

@@ -13,6 +13,7 @@ import kotlinx.coroutines.withTimeout
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.google.firebase.auth.userProfileChangeRequest
 import java.util.UUID
 
 class FirebaseModel {
@@ -29,7 +30,14 @@ class FirebaseModel {
     suspend fun register(email: String, password: String, username: String, avatarUri: Uri? = null) {
         com.booknook.app.util.Logger.d("Auth", "Registering user: $email")
         val res = auth.createUserWithEmailAndPassword(email, password).await()
-        val uid = res.user?.uid ?: throw IllegalStateException("Registration failed: No UID")
+        val user = res.user ?: throw IllegalStateException("Registration failed: No User")
+        val uid = user.uid
+
+        // Set Auth Display Name
+        val profileUpdates = com.google.firebase.auth.userProfileChangeRequest {
+            displayName = username
+        }
+        user.updateProfile(profileUpdates).await()
         
         var avatarUrl: String? = null
         if (avatarUri != null) {
@@ -80,13 +88,27 @@ class FirebaseModel {
 
     suspend fun updateProfile(username: String, email: String, avatarUri: Uri?): UserEntity {
         val uid = requireUserId()
+        val user = auth.currentUser ?: throw IllegalStateException("No auth user")
+        
+        // Update Auth Display Name if changed
+        if (user.displayName != username) {
+            try {
+                com.booknook.app.util.Logger.d("Auth", "Updating display name to $username")
+                val profileUpdates = userProfileChangeRequest {
+                    displayName = username
+                }
+                user.updateProfile(profileUpdates).await()
+            } catch (e: Exception) {
+                com.booknook.app.util.Logger.e("Auth", "Profile (display name) update failed", e)
+            }
+        }
+
         val avatarUrl = if (avatarUri != null) uploadAvatar(uid, avatarUri) else fetchProfile()?.avatarUrl
         val data = mutableMapOf<String, Any?>(
             "username" to username,
-            "email" to email,
             "avatarUrl" to avatarUrl
         )
-        db.collection("users").document(uid).set(data).await()
+        db.collection("users").document(uid).update(data).await()
         return UserEntity(id = uid, username = username, email = email, avatarUrl = avatarUrl)
     }
 
@@ -179,18 +201,35 @@ class FirebaseModel {
         val uid = requireUserId()
         val profile = fetchProfile()
         val commentId = UUID.randomUUID().toString()
+        val commentData = mapOf(
+            "id" to commentId,
+            "userId" to uid,
+            "username" to (profile?.username ?: "User"),
+            "text" to text,
+            "createdAt" to System.currentTimeMillis()
+        )
+        
         db.collection("posts").document(postId)
             .collection("comments").document(commentId)
-            .set(mapOf(
-                "id" to commentId,
-                "userId" to uid,
-                "username" to (profile?.username ?: "User"),
-                "text" to text,
-                "createdAt" to System.currentTimeMillis()
-            )).await()
+            .set(commentData).await()
 
         db.collection("posts").document(postId)
             .update("commentsCount", FieldValue.increment(1)).await()
+    }
+
+    suspend fun fetchComments(postId: String): List<com.booknook.app.data.local.entities.CommentEntity> {
+        val snap = db.collection("posts").document(postId)
+            .collection("comments").orderBy("createdAt").get().await()
+        return snap.documents.mapNotNull { doc ->
+            com.booknook.app.data.local.entities.CommentEntity(
+                id = doc.getString("id") ?: "",
+                postId = postId,
+                userId = doc.getString("userId") ?: "",
+                username = doc.getString("username") ?: "User",
+                text = doc.getString("text") ?: "",
+                createdAt = doc.getLong("createdAt") ?: 0L
+            )
+        }
     }
 }
 

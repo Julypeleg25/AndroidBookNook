@@ -9,32 +9,44 @@ import com.booknook.app.data.local.entities.PostEntity
 
 @Dao
 interface PostDao {
-    @Query("SELECT * FROM posts ORDER BY createdAt DESC")
-    fun getAll(): LiveData<List<PostEntity>>
+    @Query("""SELECT *, 
+        (SELECT EXISTS(SELECT 1 FROM likes WHERE userId = :currUid AND postId = posts.id)) as isLikedByUser 
+        FROM posts ORDER BY createdAt DESC""")
+    fun getAll(currUid: String): LiveData<List<PostEntity>>
 
-    @Query("SELECT * FROM posts WHERE userId = :userId ORDER BY createdAt DESC")
-    fun getByUser(userId: String): LiveData<List<PostEntity>>
+    @Query("""SELECT *, 
+        (SELECT EXISTS(SELECT 1 FROM likes WHERE userId = :currUid AND postId = posts.id)) as isLikedByUser 
+        FROM posts WHERE userId = :targetUserId ORDER BY createdAt DESC""")
+    fun getByUser(targetUserId: String, currUid: String): LiveData<List<PostEntity>>
 
-    @Query("SELECT * FROM posts WHERE id = :postId LIMIT 1")
-    fun getById(postId: String): LiveData<PostEntity?>
+    @Query("""SELECT *, 
+        (SELECT EXISTS(SELECT 1 FROM likes WHERE userId = :currUid AND postId = posts.id)) as isLikedByUser 
+        FROM posts WHERE id = :postId LIMIT 1""")
+    fun getById(postId: String, currUid: String): LiveData<PostEntity?>
 
-    @Query("SELECT * FROM posts WHERE id = :postId LIMIT 1")
-    suspend fun getByIdSync(postId: String): PostEntity?
+    @Query("""SELECT *, 
+        (SELECT EXISTS(SELECT 1 FROM likes WHERE userId = :currUid AND postId = posts.id)) as isLikedByUser 
+        FROM posts WHERE id = :postId LIMIT 1""")
+    suspend fun getByIdSync(postId: String, currUid: String): PostEntity?
 
-    @Query("""SELECT * FROM posts
+    @Query("""SELECT *, 
+        (SELECT EXISTS(SELECT 1 FROM likes WHERE userId = :currUid AND postId = posts.id)) as isLikedByUser 
+        FROM posts
         WHERE (:title IS NULL OR bookTitle LIKE '%' || :title || '%')
           AND (:author IS NULL OR bookAuthor LIKE '%' || :author || '%')
           AND (:minRating IS NULL OR rating >= :minRating)
           AND (:minComments IS NULL OR commentsCount >= :minComments)
         ORDER BY createdAt DESC""")
-    fun search(title: String?, author: String?, minRating: Int?, minComments: Int?): LiveData<List<PostEntity>>
+    fun search(title: String?, author: String?, minRating: Int?, minComments: Int?, currUid: String): LiveData<List<PostEntity>>
 
-    @Query("""SELECT * FROM posts
+    @Query("""SELECT *, 
+        (SELECT EXISTS(SELECT 1 FROM likes WHERE userId = :currUid AND postId = posts.id)) as isLikedByUser 
+        FROM posts
         WHERE bookTitle LIKE '%' || :query || '%'
            OR bookAuthor LIKE '%' || :query || '%'
            OR review LIKE '%' || :query || '%'
         ORDER BY createdAt DESC""")
-    fun searchByQuery(query: String): LiveData<List<PostEntity>>
+    fun searchByQuery(query: String, currUid: String): LiveData<List<PostEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(post: PostEntity)

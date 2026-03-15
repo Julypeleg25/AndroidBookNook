@@ -27,8 +27,27 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
         },
         onLike = { postId ->
             viewModel.toggleLike(postId)
+        },
+        onEdit = { postId ->
+            val action = PostsFragmentDirections.actionPostsToEdit(postId)
+            findNavController().navigate(action)
+        },
+        onDelete = { postId ->
+            showDeleteConfirmation(postId)
         }
     )
+
+    private fun showDeleteConfirmation(postId: String) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Delete Post")
+            .setMessage("Are you sure you want to delete this post? This action cannot be undone.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Delete") { _, _ ->
+                viewModel.deletePost(postId)
+                Snackbar.make(binding.root, "Post deleted", Snackbar.LENGTH_SHORT).show()
+            }
+            .show()
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

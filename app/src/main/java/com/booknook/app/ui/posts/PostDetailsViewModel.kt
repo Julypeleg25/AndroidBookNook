@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.booknook.app.data.local.entities.PostEntity
+import com.booknook.app.data.local.entities.CommentEntity
 import com.booknook.app.domain.Book
 import com.booknook.app.model.Model
 import kotlinx.coroutines.launch
@@ -21,6 +22,15 @@ class PostDetailsViewModel : ViewModel() {
     val actionFeedback: LiveData<String?> = _actionFeedback
 
     fun observePost(postId: String): LiveData<PostEntity?> = Model.observePost(postId)
+
+    fun observeComments(postId: String): LiveData<List<CommentEntity>> = 
+        Model.observeComments(postId)
+
+    fun refreshComments(postId: String) {
+        viewModelScope.launch {
+            try { Model.refreshComments(postId) } catch (_: Exception) {}
+        }
+    }
 
     fun observeWishlist(bookId: String): LiveData<Boolean> {
         val uid = Model.currentUserId() ?: return MutableLiveData(false)

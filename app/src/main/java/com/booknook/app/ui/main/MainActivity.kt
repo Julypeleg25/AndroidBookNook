@@ -32,6 +32,22 @@ class MainActivity : AppCompatActivity() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val isAuthScreen = destination.id == R.id.loginFragment || destination.id == R.id.registerFragment
             binding.bottomNav.isVisible = !isAuthScreen
+            
+            if (!isAuthScreen) {
+                // Map child fragments to their main tabs
+                val tabId = when (destination.id) {
+                    R.id.postDetailsFragment, R.id.editPostFragment -> R.id.postsFragment
+                    R.id.createPostFragment -> R.id.bookSearchFragment
+                    else -> destination.id
+                }
+                
+                // Only trigger update if the menu contains this ID (avoids crashes on deep-link fragments)
+                val menu = binding.bottomNav.menu
+                val item = menu.findItem(tabId)
+                if (item != null) {
+                    item.isChecked = true
+                }
+            }
         }
     }
 }

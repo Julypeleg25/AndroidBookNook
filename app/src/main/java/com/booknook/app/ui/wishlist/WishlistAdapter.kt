@@ -45,7 +45,9 @@ class WishlistAdapter(
                 .centerCrop()
                 .into(binding.thumb)
                 
-            binding.root.setOnLongClickListener { onRemove(item); true }
+            binding.btnRemove.visibility = android.view.View.VISIBLE
+            binding.btnRemove.setOnClickListener { onRemove(item) }
+            binding.root.setOnClickListener { /* navigate to details if needed */ }
         }
     }
 }

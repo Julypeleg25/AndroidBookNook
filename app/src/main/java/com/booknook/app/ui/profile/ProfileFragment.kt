@@ -39,11 +39,11 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
         binding.saveBtn.setOnClickListener {
             val username = binding.usernameInput.text.toString().trim()
-            val email = binding.emailInput.text.toString().trim()
-            if (username.isNotEmpty() && email.isNotEmpty()) {
-                viewModel.updateProfile(username, email, selectedAvatarUri)
-            } else {
-                Snackbar.make(binding.root, "All fields are required", Snackbar.LENGTH_SHORT).show()
+            val user = viewModel.user.value
+            if (username.isNotEmpty() && user != null) {
+                viewModel.updateProfile(username, user.email, selectedAvatarUri)
+            } else if (username.isEmpty()) {
+                Snackbar.make(binding.root, "Username is required", Snackbar.LENGTH_SHORT).show()
             }
         }
 
