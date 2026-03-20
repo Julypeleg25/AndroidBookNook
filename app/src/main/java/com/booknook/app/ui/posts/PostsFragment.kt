@@ -12,6 +12,7 @@ import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostsBinding
 import com.booknook.app.model.Model
 import com.google.android.material.snackbar.Snackbar
+import com.booknook.app.util.toUserFriendlyMessage
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
 
@@ -81,7 +82,7 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

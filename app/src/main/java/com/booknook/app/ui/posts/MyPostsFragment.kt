@@ -12,6 +12,7 @@ import com.booknook.app.databinding.FragmentMyPostsBinding
 import com.booknook.app.model.Model
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import com.booknook.app.util.toUserFriendlyMessage
 
 class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
@@ -25,15 +26,13 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
             val action = MyPostsFragmentDirections.actionMyPostsToDetails(postId)
             findNavController().navigate(action)
         },
+        showEngagement = false,
         onEdit = { postId ->
             val action = MyPostsFragmentDirections.actionMyPostsToEdit(postId)
             findNavController().navigate(action)
         },
         onDelete = { postId ->
             showDeleteConfirmation(postId)
-        },
-        onLike = { postId ->
-            viewModel.toggleLike(postId)
         }
     )
 
@@ -68,7 +67,8 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
     private fun observeViewModel() {
         viewModel.observeMyPosts().observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
-            binding.tvEmpty.isVisible = list.isEmpty()
+            binding.emptyState.isVisible = list.isEmpty()
+            binding.recyclerView.isVisible = list.isNotEmpty()
         }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
@@ -78,7 +78,7 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
     }
