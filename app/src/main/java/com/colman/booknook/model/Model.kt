@@ -1,4 +1,4 @@
-package com.colman.booknook.model
+package com.booknook.app.model
 
 import android.content.Context
 import android.net.Uri
