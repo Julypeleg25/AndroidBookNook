@@ -1,29 +1,20 @@
-package com.colman.booknook.ui.main
+package com.colman.booknook
 
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.fragment.NavHostFragment
-import com.colman.booknook.R
-import com.colman.booknook.databinding.ActivityMainBinding
-import com.colman.booknook.model.Model
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
-        val navController = navHostFragment?.navController
-        val bottomNav = binding.bottomNav
-
-        if (navController != null) {
-            androidx.navigation.ui.NavigationUI.setupWithNavController(bottomNav, navController)
-        }
-
-        if (Model.instance.isLoggedIn()) {
-             navController?.navigate(R.id.postsFragment)
+        enableEdgeToEdge()
+        setContentView(R.layout.activity_main)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
         }
     }
 }
