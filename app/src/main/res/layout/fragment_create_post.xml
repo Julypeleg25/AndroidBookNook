@@ -4,80 +4,74 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="20dp">
+    android:padding="12dp">
 
     <TextView
-        android:id="@+id/title"
+        android:id="@+id/bookTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="BookNook"
-        android:textSize="28sp"
         android:textStyle="bold"
+        android:textSize="18sp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <EditText
-        android:id="@+id/emailInput"
+    <TextView
+        android:id="@+id/bookAuthor"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Email"
-        android:inputType="textEmailAddress"
-        app:layout_constraintTop_toBottomOf="@id/title"
+        app:layout_constraintTop_toBottomOf="@id/bookTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp"/>
+        android:layout_marginTop="6dp"/>
 
-    <EditText
-        android:id="@+id/passwordInput"
-        android:layout_width="0dp"
+    <RatingBar
+        android:id="@+id/ratingBar"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="Password"
-        android:inputType="textPassword"
-        app:layout_constraintTop_toBottomOf="@id/emailInput"
+        android:numStars="5"
+        android:stepSize="1"
+        app:layout_constraintTop_toBottomOf="@id/bookAuthor"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="10dp"/>
 
     <EditText
-        android:id="@+id/usernameInput"
+        android:id="@+id/reviewInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Username (register only)"
-        android:inputType="textPersonName"
-        android:visibility="visible"
-        app:layout_constraintTop_toBottomOf="@id/passwordInput"
+        android:minLines="3"
+        android:hint="Write your review..."
+        app:layout_constraintTop_toBottomOf="@id/ratingBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="10dp"/>
 
     <Button
-        android:id="@+id/loginBtn"
+        android:id="@+id/pickImageBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pick Image"
+        app:layout_constraintTop_toBottomOf="@id/reviewInput"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="10dp"/>
+
+    <Button
+        android:id="@+id/publishBtn"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Register"
-        app:layout_constraintTop_toBottomOf="@id/usernameInput"
+        android:text="Publish"
+        app:layout_constraintTop_toBottomOf="@id/pickImageBtn"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="14dp"/>
-
-    <TextView
-        android:id="@+id/registerLink"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Have an account? Login"
-        android:textColor="@android:color/holo_blue_dark"
-        app:layout_constraintTop_toBottomOf="@id/loginBtn"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
 
     <ProgressBar
         android:id="@+id/loading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/registerLink"
+        app:layout_constraintTop_toBottomOf="@id/publishBtn"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="18dp"/>
+        android:layout_marginTop="12dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
