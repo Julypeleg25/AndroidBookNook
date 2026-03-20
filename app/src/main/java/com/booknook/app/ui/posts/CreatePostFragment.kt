@@ -11,8 +11,8 @@ import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.booknook.app.domain.Book
-import com.booknook.app.ui.auth.Event
 import com.google.android.material.snackbar.Snackbar
+import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
@@ -26,6 +26,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
         uri?.let {
             pickedImage = it
             binding.imageCard.isVisible = true
+            binding.imageRequiredHint.isVisible = false
             Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
         }
     }
@@ -35,8 +36,29 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
         _binding = FragmentCreatePostBinding.bind(view)
 
         val args = CreatePostFragmentArgs.fromBundle(requireArguments())
-        binding.bookTitle.text = args.bookTitle
-        binding.bookAuthor.text = args.bookAuthor
+        val selectedBook = Book(
+            id = args.bookId,
+            title = args.bookTitle,
+            author = args.bookAuthor,
+            thumbnail = args.bookThumbnail,
+            publishedDate = args.bookPublishedDate,
+            genre = args.bookGenre,
+            pageCount = if (args.bookPageCount > 0) args.bookPageCount else null,
+            description = args.bookDescription
+        )
+
+        BookInfoCardBinder.bind(
+            binding.bookInfoPanel,
+            BookInfoCardModel(
+                title = selectedBook.title,
+                author = selectedBook.author,
+                thumbnail = selectedBook.thumbnail,
+                genre = selectedBook.genre,
+                publishedDate = selectedBook.publishedDate,
+                pageCount = selectedBook.pageCount,
+                description = selectedBook.description
+            )
+        )
 
         observeViewModel()
 
@@ -45,13 +67,16 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
         binding.publishBtn.setOnClickListener {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
-            if (rating <= 0 || review.isEmpty()) {
-                Snackbar.make(binding.root, "Rating and review required", Snackbar.LENGTH_SHORT).show()
+            if (binding.ratingBar.rating == 0f || review.isEmpty()) {
+                Snackbar.make(binding.root, "rating required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (pickedImage == null) {
+                Snackbar.make(binding.root, "photo required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val book = Book(args.bookId, args.bookTitle, args.bookAuthor, args.bookThumbnail)
-            viewModel.createPost(book, rating, review, pickedImage)
+            viewModel.createPost(selectedBook, rating, review, pickedImage)
         }
     }
 
@@ -73,7 +98,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

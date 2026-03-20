@@ -7,37 +7,46 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.data.local.entities.CommentEntity
 import com.booknook.app.databinding.RowCommentBinding
+import java.text.DateFormat
+import java.util.Date
 
-class CommentsAdapter : ListAdapter<CommentEntity, CommentsAdapter.Holder>(DiffCallback) {
+import com.squareup.picasso.Picasso
+import com.booknook.app.R
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        return Holder(RowCommentBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+class CommentsAdapter : ListAdapter<CommentEntity, CommentsAdapter.CommentViewHolder>(CommentDiffCallback()) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommentViewHolder {
+        val binding = RowCommentBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return CommentViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: Holder, position: Int) {
+    override fun onBindViewHolder(holder: CommentViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
 
-    object DiffCallback : DiffUtil.ItemCallback<CommentEntity>() {
-        override fun areItemsTheSame(oldItem: CommentEntity, newItem: CommentEntity): Boolean = oldItem.id == newItem.id
-        override fun areContentsTheSame(oldItem: CommentEntity, newItem: CommentEntity): Boolean = oldItem == newItem
-    }
-
-    class Holder(private val binding: RowCommentBinding) : RecyclerView.ViewHolder(binding.root) {
+    class CommentViewHolder(private val binding: RowCommentBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(comment: CommentEntity) {
             binding.username.text = comment.username
             binding.text.text = comment.text
-            binding.time.text = formatTime(comment.createdAt)
-        }
+            binding.time.text = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                .format(Date(comment.createdAt))
 
-        private fun formatTime(timestamp: Long): String {
-            val diff = System.currentTimeMillis() - timestamp
-            return when {
-                diff < 60000 -> "Just now"
-                diff < 3600000 -> "${diff / 60000}m ago"
-                diff < 86400000 -> "${diff / 3600000}h ago"
-                else -> "${diff / 86400000}d ago"
+            if (!comment.userAvatarUrl.isNullOrBlank()) {
+                Picasso.get()
+                    .load(comment.userAvatarUrl)
+                    .placeholder(R.drawable.ic_launcher_foreground)
+                    .error(R.drawable.ic_launcher_foreground)
+                    .fit()
+                    .centerCrop()
+                    .into(binding.avatar)
+            } else {
+                binding.avatar.setImageResource(R.drawable.ic_launcher_foreground)
             }
         }
+    }
+
+    class CommentDiffCallback : DiffUtil.ItemCallback<CommentEntity>() {
+        override fun areItemsTheSame(oldItem: CommentEntity, newItem: CommentEntity): Boolean = oldItem.id == newItem.id
+        override fun areContentsTheSame(oldItem: CommentEntity, newItem: CommentEntity): Boolean = oldItem == newItem
     }
 }

@@ -10,8 +10,8 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
-import com.booknook.app.ui.auth.Event
 import com.google.android.material.snackbar.Snackbar
+import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class EditPostFragment : Fragment(R.layout.fragment_create_post) {
@@ -21,11 +21,13 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
     private val viewModel: CreatePostViewModel by viewModels()
     private var pickedImage: Uri? = null
     private lateinit var postId: String
+    private var hasInitializedForm = false
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             pickedImage = it
             binding.imageCard.isVisible = true
+            binding.imageRequiredHint.isVisible = false
             Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
         }
     }
@@ -35,8 +37,11 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         _binding = FragmentCreatePostBinding.bind(view)
         postId = EditPostFragmentArgs.fromBundle(requireArguments()).postId
 
-        binding.publishBtn.text = "Save"
-        binding.pickImageBtn.text = "Replace Image"
+        binding.publishBtn.text = getString(R.string.edit_post_save_button)
+        binding.pickImageBtn.text = getString(R.string.edit_post_replace_image_button)
+        binding.bookHeader.text = getString(R.string.edit_post_book_header)
+        binding.bookSubtitle.text = getString(R.string.edit_post_book_subtitle)
+        binding.imageRequiredHint.isVisible = false
 
         observeViewModel()
 
@@ -45,8 +50,8 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         binding.publishBtn.setOnClickListener {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
-            if (rating <= 0 || review.isEmpty()) {
-                Snackbar.make(binding.root, "Rating and review required", Snackbar.LENGTH_SHORT).show()
+            if (binding.ratingBar.rating == 0f || review.isEmpty()) {
+                Snackbar.make(binding.root, "rating required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             viewModel.updatePost(postId, rating, review, pickedImage)
@@ -56,10 +61,25 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
     private fun observeViewModel() {
         viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
             if (post == null) return@observe
-            binding.bookTitle.text = post.bookTitle
-            binding.bookAuthor.text = post.bookAuthor
-            binding.ratingBar.rating = post.rating.toFloat()
-            binding.reviewInput.setText(post.review)
+
+            if (!hasInitializedForm) {
+                binding.ratingBar.rating = post.rating.toFloat()
+                binding.reviewInput.setText(post.review)
+
+                BookInfoCardBinder.bind(
+                    binding.bookInfoPanel,
+                    BookInfoCardModel(
+                        title = post.bookTitle,
+                        author = post.bookAuthor,
+                        thumbnail = post.bookThumbnail,
+                        genre = post.bookGenre,
+                        publishedDate = post.bookPublishedDate,
+                        pageCount = post.bookPageCount,
+                        description = post.bookDescription
+                    )
+                )
+                hasInitializedForm = true
+            }
 
             if (pickedImage == null && !post.imageUrl.isNullOrBlank()) {
                 binding.imageCard.isVisible = true
@@ -83,7 +103,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

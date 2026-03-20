@@ -25,7 +25,7 @@ class CreatePostViewModel : ViewModel() {
     fun observePost(postId: String): LiveData<PostEntity?> = Model.observePost(postId)
 
     fun createPost(book: Book, rating: Int, review: String, imageUri: Uri?) {
-        if (_loading.value == true) return // Prevent double tap
+        if (_loading.value == true) return 
         _loading.value = true
         com.booknook.app.util.Logger.d("CreatePost", "Starting post creation for: ${book.title}")
         
