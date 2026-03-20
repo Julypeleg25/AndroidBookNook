@@ -1,4 +1,4 @@
-package com.booknook.app.ui.posts
+package com.colman.booknook.ui.posts
 
 import android.os.Bundle
 import android.view.View
@@ -6,9 +6,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.booknook.app.R
-import com.booknook.app.databinding.FragmentPostsBinding
-import com.booknook.app.model.Model
+import com.colman.booknook.R
+import com.colman.booknook.databinding.FragmentPostsBinding
+import com.colman.booknook.model.Model
 import kotlinx.coroutines.launch
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {

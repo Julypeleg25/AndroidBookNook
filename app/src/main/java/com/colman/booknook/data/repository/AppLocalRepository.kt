@@ -1,8 +1,8 @@
-package com.booknook.app.data.repository
+package com.colman.booknook.data.repository
 
 import androidx.lifecycle.LiveData
-import com.booknook.app.data.local.dao.*
-import com.booknook.app.data.local.entities.*
+import com.colman.booknook.data.local.dao.*
+import com.colman.booknook.data.local.entities.*
 
 class AppLocalRepository(
     private val postDao: PostDao,

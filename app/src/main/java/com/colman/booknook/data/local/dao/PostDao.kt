@@ -32,6 +32,3 @@ interface PostDao {
     @Query("DELETE FROM posts WHERE id = :postId")
     fun deleteById(postId: String)
 }
-
-package com.colman.booknook.data.local.dao
-import com.colman.booknook.data.local.entities.PostEntity

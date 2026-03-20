@@ -1,4 +1,4 @@
-package com.booknook.app.data.local.entities
+package com.colman.booknook.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.Index

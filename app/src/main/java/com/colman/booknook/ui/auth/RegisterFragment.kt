@@ -6,7 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import kotlinx.coroutines.launch
 import com.colman.booknook.R
 import com.colman.booknook.databinding.FragmentRegisterBinding
 import com.colman.booknook.model.Model
@@ -33,12 +35,13 @@ class RegisterFragment : Fragment() {
             val username = binding.etUsername.text.toString()
 
             if (email.isNotEmpty() && password.isNotEmpty() && username.isNotEmpty()) {
-                Model.instance.register(email, password, username) { success ->
-                    if (success) {
+                androidx.lifecycle.lifecycleScope.launch {
+                    try {
+                        Model.firebase.register(email, password, username)
                         Toast.makeText(requireContext(), "Registration Successful", Toast.LENGTH_SHORT).show()
-                        findNavController().navigate(R.id.action_registerFragment_to_postsFragment) // Or back to login
-                    } else {
-                        Toast.makeText(requireContext(), "Registration Failed", Toast.LENGTH_SHORT).show()
+                        findNavController().navigate(R.id.action_registerFragment_to_postsFragment)
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), "Registration Failed: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

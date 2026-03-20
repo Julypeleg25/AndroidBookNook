@@ -1,12 +1,12 @@
-package com.booknook.app.ui.auth
+package com.colman.booknook.ui.auth
 
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.booknook.app.databinding.ActivityRegisterBinding
-import com.booknook.app.model.Model
+import com.colman.booknook.databinding.ActivityRegisterBinding
+import com.colman.booknook.model.Model
 import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {
@@ -18,16 +18,17 @@ class RegisterActivity : AppCompatActivity() {
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.usernameInput.visibility = View.VISIBLE
         binding.loginBtn.text = "Register"
         binding.registerLink.text = "Have an account? Login"
 
         binding.loginBtn.setOnClickListener {
             val email = binding.emailInput.text.toString().trim()
             val password = binding.passwordInput.text.toString()
-            val username = "User" // simplest; you can add a username field in layout later
+            val username = binding.usernameInput.text.toString().trim()
 
-            if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Email and password required", Toast.LENGTH_SHORT).show()
+            if (email.isEmpty() || password.isEmpty() || username.isEmpty()) {
+                Toast.makeText(this, "Email, password and username required", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 

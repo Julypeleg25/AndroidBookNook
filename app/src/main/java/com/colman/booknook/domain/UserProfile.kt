@@ -1,4 +1,4 @@
-package com.booknook.app.domain
+package com.colman.booknook.domain
 
 data class UserProfile(
     val id: String,

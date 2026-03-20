@@ -1,4 +1,4 @@
-package com.booknook.app.ui.auth
+package com.colman.booknook.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,8 +6,9 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.booknook.app.databinding.ActivityLoginBinding
-import com.booknook.app.model.Model
+import com.colman.booknook.databinding.ActivityLoginBinding
+import com.colman.booknook.model.Model
+import com.booknook.app.ui.main.MainActivity
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
@@ -19,12 +20,18 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // ensure not showing username on login
+        binding.usernameInput.visibility = View.GONE
+
         // Auto-login
         if (Model.currentUserId() != null) {
-            startActivity(Intent(this, com.booknook.app.ui.main.MainActivity::class.java))
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
         }
+
+        binding.loginBtn.text = "Login"
+        binding.registerLink.text = "No account? Register"
 
         binding.loginBtn.setOnClickListener {
             val email = binding.emailInput.text.toString().trim()
@@ -39,7 +46,8 @@ class LoginActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     Model.firebase.login(email, password)
-                    startActivity(Intent(this@LoginActivity, com.booknook.app.ui.main.MainActivity::class.java))
+                    Model.ensureLocalProfile()
+                    startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                     finish()
                 } catch (e: Exception) {
                     Toast.makeText(this@LoginActivity, e.message ?: "Login failed", Toast.LENGTH_SHORT).show()
