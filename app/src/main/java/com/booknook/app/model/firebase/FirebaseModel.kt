@@ -33,7 +33,6 @@ class FirebaseModel {
         val user = res.user ?: throw IllegalStateException("Registration failed: No User")
         val uid = user.uid
 
-        // Set Auth Display Name
         val profileUpdates = com.google.firebase.auth.userProfileChangeRequest {
             displayName = username
         }
@@ -86,29 +85,25 @@ class FirebaseModel {
         )
     }
 
+
     suspend fun updateProfile(username: String, email: String, avatarUri: Uri?): UserEntity {
         val uid = requireUserId()
         val user = auth.currentUser ?: throw IllegalStateException("No auth user")
-        
-        // Update Auth Display Name if changed
+
         if (user.displayName != username) {
-            try {
-                com.booknook.app.util.Logger.d("Auth", "Updating display name to $username")
-                val profileUpdates = userProfileChangeRequest {
-                    displayName = username
-                }
-                user.updateProfile(profileUpdates).await()
-            } catch (e: Exception) {
-                com.booknook.app.util.Logger.e("Auth", "Profile (display name) update failed", e)
-            }
+            val profileUpdates = userProfileChangeRequest { displayName = username }
+            user.updateProfile(profileUpdates).await()
         }
 
-        val avatarUrl = if (avatarUri != null) uploadAvatar(uid, avatarUri) else fetchProfile()?.avatarUrl
-        val data = mutableMapOf<String, Any?>(
-            "username" to username,
-            "avatarUrl" to avatarUrl
-        )
+        val avatarUrl = if (avatarUri != null) {
+            uploadAvatar(uid, avatarUri)
+        } else {
+            fetchProfile()?.avatarUrl
+        }
+
+        val data = mapOf("username" to username, "avatarUrl" to avatarUrl)
         db.collection("users").document(uid).update(data).await()
+
         return UserEntity(id = uid, username = username, email = email, avatarUrl = avatarUrl)
     }
 
@@ -118,25 +113,48 @@ class FirebaseModel {
         return ref.downloadUrl.await().toString()
     }
 
-    suspend fun uploadPostImage(postId: String, uri: Uri): String {
-        val ref = storage.reference.child("posts/$postId.jpg")
+    suspend fun uploadPostImage(userId: String, postId: String, uri: Uri): String {
+        val ref = storage.reference.child("posts/$userId/$postId.jpg")
         ref.putFile(uri).await()
         return ref.downloadUrl.await().toString()
     }
 
-    suspend fun createPost(post: PostEntity) {
-        com.booknook.app.util.Logger.d("Firestore", "Creating post: ${post.id} for book: ${post.bookTitle}")
-        db.collection("posts").document(post.id).set(post.toMap()).await()
-        com.booknook.app.util.Logger.d("Firestore", "Post ${post.id} created successfully")
+    suspend fun updatePost(post: PostEntity) {
+        val uid = requireUserId()
+
+        if (post.userId != uid) {
+            throw IllegalStateException("Unauthorized: You do not own this post.")
+        }
+
+        com.booknook.app.util.Logger.d("Firestore", "Updating post: ${post.id}")
+
+        db.collection("posts")
+            .document(post.id)
+            .set(post.toMap())
+            .await()
+
+        com.booknook.app.util.Logger.d("Firestore", "Post ${post.id} updated successfully")
     }
 
-    suspend fun updatePost(post: PostEntity) {
+    suspend fun createPost(post: PostEntity) {
         db.collection("posts").document(post.id).set(post.toMap()).await()
     }
 
     suspend fun deletePost(postId: String) {
+        val post = getPost(postId) ?: return
+        val uid = requireUserId()
+
+        if (post.userId != uid) throw Exception("Unauthorized deletion attempt")
+
         db.collection("posts").document(postId).delete().await()
-        try { storage.reference.child("posts/$postId.jpg").delete().await() } catch (_: Exception) {}
+
+        if (!post.imageUrl.isNullOrEmpty()) {
+            try {
+                storage.reference.child("posts/$uid/$postId.jpg").delete().await()
+            } catch (e: Exception) {
+                com.booknook.app.util.Logger.d("Firebase", "Storage file already gone or missing")
+            }
+        }
     }
 
     suspend fun getPost(postId: String): PostEntity? {
@@ -157,7 +175,6 @@ class FirebaseModel {
         
         val uid = currentUserId() ?: return posts.sortedByDescending { it.createdAt }
         
-        // Fetch all liked post IDs for the current user using collection group query
         val likedPostIds = try {
             db.collectionGroup("likes")
                 .whereEqualTo(FieldPath.documentId(), uid)

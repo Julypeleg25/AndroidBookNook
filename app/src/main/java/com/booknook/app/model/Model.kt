@@ -110,43 +110,37 @@ object Model {
         lastRefreshTime = now
     }
 
+// --- Model.kt ---
+
     suspend fun createPost(book: Book, rating: Int, review: String, imageUri: Uri?) {
         val uid = firebase.requireUserId()
         val username = firebase.fetchProfile()?.username ?: "User"
         val postId = UUID.randomUUID().toString()
-        val imageUrl = if (imageUri != null) firebase.uploadPostImage(postId, imageUri) else null
-        val now = System.currentTimeMillis()
+
+        // Path now includes UID: posts/uid/postId.jpg
+        val imageUrl = imageUri?.let { firebase.uploadPostImage(uid, postId, it) }
 
         val post = PostEntity(
-            id = postId,
-            userId = uid,
-            username = username,
-            bookId = book.id,
-            bookTitle = book.title,
-            bookAuthor = book.author,
-            bookThumbnail = book.thumbnail,
-            rating = rating,
-            review = review,
-            imageUrl = imageUrl,
-            createdAt = now,
-            likesCount = 0,
-            commentsCount = 0
+            id = postId, userId = uid, username = username,
+            bookId = book.id, bookTitle = book.title, bookAuthor = book.author,
+            bookThumbnail = book.thumbnail, rating = rating, review = review,
+            imageUrl = imageUrl, createdAt = System.currentTimeMillis()
         )
 
         firebase.createPost(post)
-        withContext(Dispatchers.IO) {
-            local.upsertPost(post)
-        }
+        withContext(Dispatchers.IO) { local.upsertPost(post) }
     }
 
     suspend fun updatePost(postId: String, rating: Int, review: String, imageUri: Uri?) {
+        val uid = firebase.requireUserId()
         val existing = firebase.getPost(postId) ?: return
-        val imageUrl = if (imageUri != null) firebase.uploadPostImage(postId, imageUri) else existing.imageUrl
+        if (existing.userId != uid) return // Security check
+
+        val imageUrl = imageUri?.let { firebase.uploadPostImage(uid, postId, it) } ?: existing.imageUrl
+
         val updated = existing.copy(rating = rating, review = review, imageUrl = imageUrl)
         firebase.updatePost(updated)
-        withContext(Dispatchers.IO) {
-            local.upsertPost(updated)
-        }
+        withContext(Dispatchers.IO) { local.upsertPost(updated) }
     }
 
     suspend fun deletePost(postId: String) {
