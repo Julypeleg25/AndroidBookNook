@@ -1,8 +1,8 @@
-package com.colman.booknook.data.local.dao
+package com.booknook.app.data.local.dao
 
 import androidx.lifecycle.LiveData
 import androidx.room.*
-import com.colman.booknook.data.local.entities.PostEntity
+import com.booknook.app.data.local.entities.PostEntity
 
 @Dao
 interface PostDao {
