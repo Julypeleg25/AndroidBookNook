@@ -1,7 +1,7 @@
-package com.colman.booknook.base
+package com.colman.booknook.app.base
 
 import android.app.Application
-import com.colman.booknook.model.Model
+import com.colman.booknook.app.model.Model
 
 class MyApplication : Application() {
     override fun onCreate() {
