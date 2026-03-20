@@ -1,10 +1,12 @@
 package com.booknook.app.model.api
 
 import com.booknook.app.domain.Book
+import com.booknook.app.model.api.dto.BookDto
 import com.booknook.app.model.api.dto.SearchResponseDto
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 private interface GoogleBooksApi {
@@ -14,6 +16,11 @@ private interface GoogleBooksApi {
         @Query("startIndex") startIndex: Int = 0,
         @Query("maxResults") maxResults: Int = 40
     ): SearchResponseDto
+
+    @GET("volumes/{volumeId}")
+    suspend fun getVolume(
+        @Path("volumeId") volumeId: String
+    ): BookDto
 }
 
 class ApiModel {
@@ -34,7 +41,7 @@ class ApiModel {
         val q = query.lowercase().trim()
         if (q.isBlank()) return emptyList()
 
-        // Improve relevance with intitle: OR inauthor:
+        
         val refinedQuery = "intitle:\"$q\" OR inauthor:\"$q\""
         
         com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $refinedQuery (startIndex: $startIndex)")
@@ -47,14 +54,30 @@ class ApiModel {
 
         val items = res.items ?: return emptyList()
 
-        return items.map { dto ->
-            Book(
-                id = dto.id,
-                title = dto.volumeInfo.title ?: "",
-                author = dto.volumeInfo.authors?.joinToString(", ") ?: "",
-                thumbnail = dto.volumeInfo.imageLinks?.thumbnail
-                    ?.replace("http://", "https://")
-            )
+        return items.map { dto -> dto.toDomainBook() }
+    }
+
+    suspend fun getBook(volumeId: String): Book? {
+        if (volumeId.isBlank()) return null
+
+        return try {
+            api.getVolume(volumeId).toDomainBook()
+        } catch (e: Exception) {
+            com.booknook.app.util.Logger.e("GoogleBooks", "Fetch by id failed for $volumeId", e)
+            null
         }
     }
+}
+
+private fun BookDto.toDomainBook(): Book {
+    return Book(
+        id = id,
+        title = volumeInfo.title ?: "",
+        author = volumeInfo.authors?.joinToString(", ") ?: "",
+        thumbnail = volumeInfo.imageLinks?.thumbnail?.replace("http://", "https://"),
+        publishedDate = volumeInfo.publishedDate,
+        genre = volumeInfo.categories?.joinToString(", "),
+        pageCount = volumeInfo.pageCount,
+        description = volumeInfo.description
+    )
 }

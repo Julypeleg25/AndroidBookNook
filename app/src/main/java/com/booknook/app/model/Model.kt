@@ -5,8 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import com.booknook.app.data.local.AppDatabase
 import com.booknook.app.data.local.entities.PostEntity
-import com.booknook.app.data.local.entities.LikeEntity
 import com.booknook.app.data.local.entities.CommentEntity
+import com.booknook.app.data.local.entities.LikeEntity
 import com.booknook.app.data.local.entities.ReadlistEntity
 import com.booknook.app.data.local.entities.UserEntity
 import com.booknook.app.data.local.entities.WishlistEntity
@@ -69,6 +69,7 @@ object Model {
     }
 
     suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> = api.searchBooks(query, startIndex)
+    suspend fun getBook(bookId: String): Book? = api.getBook(bookId)
 
     fun observePosts(): LiveData<List<PostEntity>> = local.observePosts(currentUserId() ?: "")
     fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = local.observeMyPosts(userId, currentUserId() ?: "")
@@ -110,37 +111,54 @@ object Model {
         lastRefreshTime = now
     }
 
-// --- Model.kt ---
-
     suspend fun createPost(book: Book, rating: Int, review: String, imageUri: Uri?) {
         val uid = firebase.requireUserId()
         val username = firebase.fetchProfile()?.username ?: "User"
         val postId = UUID.randomUUID().toString()
-
-        // Path now includes UID: posts/uid/postId.jpg
-        val imageUrl = imageUri?.let { firebase.uploadPostImage(uid, postId, it) }
+        val imageUrl = if (imageUri != null) firebase.uploadPostImage(uid, postId, imageUri) else null
+        val now = System.currentTimeMillis()
 
         val post = PostEntity(
-            id = postId, userId = uid, username = username,
-            bookId = book.id, bookTitle = book.title, bookAuthor = book.author,
-            bookThumbnail = book.thumbnail, rating = rating, review = review,
-            imageUrl = imageUrl, createdAt = System.currentTimeMillis()
+            id = postId,
+            userId = uid,
+            username = username,
+            bookId = book.id,
+            bookTitle = book.title,
+            bookAuthor = book.author,
+            bookThumbnail = book.thumbnail,
+            rating = rating,
+            review = review,
+            imageUrl = imageUrl,
+            createdAt = now,
+            likesCount = 0,
+            commentsCount = 0,
+            bookPublishedDate = book.publishedDate,
+            bookGenre = book.genre,
+            bookPageCount = book.pageCount,
+            bookDescription = book.description
         )
 
         firebase.createPost(post)
-        withContext(Dispatchers.IO) { local.upsertPost(post) }
+        withContext(Dispatchers.IO) {
+            local.upsertPost(post)
+        }
     }
 
     suspend fun updatePost(postId: String, rating: Int, review: String, imageUri: Uri?) {
         val uid = firebase.requireUserId()
         val existing = firebase.getPost(postId) ?: return
-        if (existing.userId != uid) return // Security check
+        if (existing.userId != uid) return
 
-        val imageUrl = imageUri?.let { firebase.uploadPostImage(uid, postId, it) } ?: existing.imageUrl
-
+        val imageUrl = if (imageUri != null) {
+            firebase.uploadPostImage(uid, postId, imageUri)
+        } else {
+            existing.imageUrl
+        }
         val updated = existing.copy(rating = rating, review = review, imageUrl = imageUrl)
         firebase.updatePost(updated)
-        withContext(Dispatchers.IO) { local.upsertPost(updated) }
+        withContext(Dispatchers.IO) {
+            local.upsertPost(updated)
+        }
     }
 
     suspend fun deletePost(postId: String) {
@@ -252,7 +270,11 @@ object Model {
                         title = book.title,
                         author = book.author,
                         thumbnail = book.thumbnail,
-                        addedAt = System.currentTimeMillis()
+                        addedAt = System.currentTimeMillis(),
+                        genre = book.genre,
+                        publishedDate = book.publishedDate,
+                        pageCount = book.pageCount,
+                        description = book.description
                     )
                 )
                 true
@@ -284,7 +306,11 @@ object Model {
                         title = book.title,
                         author = book.author,
                         thumbnail = book.thumbnail,
-                        addedAt = System.currentTimeMillis()
+                        addedAt = System.currentTimeMillis(),
+                        genre = book.genre,
+                        publishedDate = book.publishedDate,
+                        pageCount = book.pageCount,
+                        description = book.description
                     )
                 )
                 true

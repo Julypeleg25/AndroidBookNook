@@ -263,7 +263,11 @@ private fun PostEntity.toMap(): Map<String, Any?> = mapOf(
     "imageUrl" to imageUrl,
     "createdAt" to createdAt,
     "likesCount" to likesCount,
-    "commentsCount" to commentsCount
+    "commentsCount" to commentsCount,
+    "bookPublishedDate" to bookPublishedDate,
+    "bookGenre" to bookGenre,
+    "bookPageCount" to bookPageCount,
+    "bookDescription" to bookDescription
 )
 
 private fun com.google.firebase.firestore.DocumentSnapshot.toPostEntity(isLiked: Boolean): PostEntity? {
@@ -282,6 +286,10 @@ private fun com.google.firebase.firestore.DocumentSnapshot.toPostEntity(isLiked:
         createdAt = getLong("createdAt") ?: 0L,
         likesCount = (getLong("likesCount") ?: 0).toInt(),
         commentsCount = (getLong("commentsCount") ?: 0).toInt(),
+        bookPublishedDate = getString("bookPublishedDate"),
+        bookGenre = getString("bookGenre"),
+        bookPageCount = getLong("bookPageCount")?.toInt(),
+        bookDescription = getString("bookDescription"),
         isLikedByUser = isLiked
     )
 }
