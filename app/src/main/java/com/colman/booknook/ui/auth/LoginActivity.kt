@@ -1,4 +1,4 @@
-package com.colman.booknook.app.ui.auth
+package com.colman.booknook.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,8 +6,8 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.colman.booknook.app.databinding.ActivityLoginBinding
-import com.colman.booknook.app.model.Model
+import com.colman.booknook.databinding.ActivityLoginBinding
+import com.colman.booknook.model.Model
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
@@ -21,7 +21,7 @@ class LoginActivity : AppCompatActivity() {
 
         // Auto-login
         if (Model.currentUserId() != null) {
-            startActivity(Intent(this, com.colman.booknook.app.ui.main.MainActivity::class.java))
+            startActivity(Intent(this, com.colman.booknook.ui.main.MainActivity::class.java))
             finish()
             return
         }
@@ -39,7 +39,7 @@ class LoginActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     Model.firebase.login(email, password)
-                    startActivity(Intent(this@LoginActivity, com.colman.booknook.app.ui.main.MainActivity::class.java))
+                    startActivity(Intent(this@LoginActivity, com.colman.booknook.ui.main.MainActivity::class.java))
                     finish()
                 } catch (e: Exception) {
                     Toast.makeText(this@LoginActivity, e.message ?: "Login failed", Toast.LENGTH_SHORT).show()
