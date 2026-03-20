@@ -1,7 +1,7 @@
-package com.colman.booknook.model.api
+package com.booknook.app.model.api
 
-import com.colman.booknook.domain.Book
-import com.colman.booknook.model.api.dto.SearchResponseDto
+import com.booknook.app.domain.Book
+import com.booknook.app.model.api.dto.SearchResponseDto
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET

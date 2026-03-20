@@ -1,4 +1,4 @@
-package com.colman.booknook.domain
+package com.booknook.app.domain
 
 data class Book(
     val id: String,

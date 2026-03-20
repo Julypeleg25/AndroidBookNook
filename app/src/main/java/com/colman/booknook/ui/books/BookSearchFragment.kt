@@ -1,7 +1,7 @@
-package com.colman.booknook.ui.books
+package com.booknook.app.ui.books
 
 import androidx.fragment.app.Fragment
-import com.colman.booknook.R
+import com.booknook.app.R
 
 class BookSearchFragment : Fragment(R.layout.fragment_placeholder) {
 }

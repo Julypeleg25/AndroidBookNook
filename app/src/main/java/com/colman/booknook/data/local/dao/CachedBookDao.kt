@@ -1,11 +1,11 @@
-package com.colman.booknook.data.local.dao
+package com.booknook.app.data.local.dao
 
 import androidx.room.*
-import com.colman.booknook.data.local.entities.CachedBookEntity
+import com.booknook.app.data.local.entities.CachedBookEntity
 
 @Dao
 interface CachedBookDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     fun upsertAll(items: List<CachedBookEntity>)
 
     @Query("DELETE FROM cached_books WHERE lastFetchedAt < :minTime")

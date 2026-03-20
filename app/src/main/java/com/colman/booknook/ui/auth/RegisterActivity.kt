@@ -1,12 +1,12 @@
-package com.colman.booknook.ui.auth
+package com.booknook.app.ui.auth
 
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.colman.booknook.databinding.ActivityRegisterBinding
-import com.colman.booknook.model.Model
+import com.booknook.app.databinding.ActivityRegisterBinding
+import com.booknook.app.model.Model
 import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {

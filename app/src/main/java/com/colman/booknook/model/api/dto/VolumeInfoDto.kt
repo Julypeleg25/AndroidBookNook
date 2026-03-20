@@ -1,4 +1,4 @@
-package com.colman.booknook.model.api.dto
+package com.booknook.app.model.api.dto
 
 data class VolumeInfoDto(
     val title: String?,

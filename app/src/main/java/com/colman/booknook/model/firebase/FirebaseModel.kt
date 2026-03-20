@@ -1,7 +1,7 @@
-package com.colman.booknook.model.firebase
+package com.booknook.app.model.firebase
 
 import android.net.Uri
-import com.colman.booknook.data.local.entities.PostEntity
+import com.booknook.app.data.local.entities.PostEntity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage

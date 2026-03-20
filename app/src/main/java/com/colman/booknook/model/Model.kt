@@ -1,16 +1,16 @@
-package com.colman.booknook.model
+package com.booknook.app.model
 
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.LiveData
-import com.colman.booknook.data.local.AppDatabase
-import com.colman.booknook.data.local.entities.*
-import com.colman.booknook.data.repository.AppLocalRepository
-import com.colman.booknook.domain.Book
-import com.colman.booknook.domain.Post
-import com.colman.booknook.domain.UserProfile
-import com.colman.booknook.model.api.ApiModel
-import com.colman.booknook.model.firebase.FirebaseModel
+import com.booknook.app.data.local.AppDatabase
+import com.booknook.app.data.local.entities.*
+import com.booknook.app.data.repository.AppLocalRepository
+import com.booknook.app.domain.Book
+import com.booknook.app.domain.Post
+import com.booknook.app.domain.UserProfile
+import com.booknook.app.model.api.ApiModel
+import com.booknook.app.model.firebase.FirebaseModel
 import java.util.UUID
 
 object Model {

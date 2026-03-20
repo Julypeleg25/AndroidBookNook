@@ -1,10 +1,10 @@
-package com.colman.booknook.ui.posts
+package com.booknook.app.ui.posts
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.colman.booknook.data.local.entities.PostEntity
-import com.colman.booknook.databinding.RowPostBinding
+import com.booknook.app.data.local.entities.PostEntity
+import com.booknook.app.databinding.RowPostBinding
 
 class PostsAdapter(
     private val onClick: (String) -> Unit
