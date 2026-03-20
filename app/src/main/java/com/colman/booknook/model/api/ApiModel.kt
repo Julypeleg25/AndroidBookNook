@@ -26,12 +26,10 @@ class ApiModel {
         val res = api.search(query)
         val items = res.items ?: emptyList()
         return items.map {
-            val title = it.volumeInfo.title ?: ""
-            val author = it.volumeInfo.authors?.joinToString(", ") ?: ""
             Book(
                 id = it.id,
-                title = title,
-                author = author,
+                title = it.volumeInfo.title ?: "",
+                author = it.volumeInfo.authors?.joinToString(", ") ?: "",
                 thumbnail = it.volumeInfo.imageLinks?.thumbnail
             )
         }

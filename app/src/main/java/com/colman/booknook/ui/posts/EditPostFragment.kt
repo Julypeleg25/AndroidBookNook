@@ -10,14 +10,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.colman.booknook.R
 import com.colman.booknook.databinding.FragmentCreatePostBinding
-import com.colman.booknook.domain.Book
 import com.colman.booknook.model.Model
 import kotlinx.coroutines.launch
 
-class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
+class EditPostFragment : Fragment(R.layout.fragment_create_post) {
 
     private lateinit var binding: FragmentCreatePostBinding
     private var pickedImage: Uri? = null
+    private lateinit var postId: String
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pickedImage = uri
@@ -26,10 +26,19 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding = FragmentCreatePostBinding.bind(view)
+        postId = EditPostFragmentArgs.fromBundle(requireArguments()).postId
 
-        val args = CreatePostFragmentArgs.fromBundle(requireArguments())
-        binding.bookTitle.text = args.bookTitle
-        binding.bookAuthor.text = args.bookAuthor
+        // Reuse the create layout, but change button labels
+        binding.publishBtn.text = "Save"
+        binding.pickImageBtn.text = "Replace Image"
+
+        Model.observePost(postId).observe(viewLifecycleOwner) { post ->
+            if (post == null) return@observe
+            binding.bookTitle.text = post.bookTitle
+            binding.bookAuthor.text = post.bookAuthor
+            binding.ratingBar.rating = post.rating.toFloat()
+            binding.reviewInput.setText(post.review)
+        }
 
         binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
 
@@ -41,16 +50,14 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
                 return@setOnClickListener
             }
 
-            val book = Book(args.bookId, args.bookTitle, args.bookAuthor, args.bookThumbnail)
-
             setLoading(true)
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    Model.createPost(book, rating, review, pickedImage)
-                    Toast.makeText(requireContext(), "Posted!", Toast.LENGTH_SHORT).show()
+                    Model.updatePost(postId, rating, review, pickedImage)
+                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Publish failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), e.message ?: "Update failed", Toast.LENGTH_SHORT).show()
                 } finally {
                     setLoading(false)
                 }
