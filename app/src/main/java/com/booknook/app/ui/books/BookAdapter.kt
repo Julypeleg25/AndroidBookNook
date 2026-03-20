@@ -35,8 +35,24 @@ class BookAdapter(
         private val onClick: (Book) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(book: Book) {
+            val context = binding.root.context
             binding.title.text = book.title
             binding.author.text = book.author
+
+            if (!book.genre.isNullOrBlank()) {
+                binding.genre.text = book.genre
+                binding.genre.visibility = android.view.View.VISIBLE
+            } else {
+                binding.genre.visibility = android.view.View.GONE
+            }
+
+            if (book.pageCount != null && book.pageCount > 0) {
+                binding.pageCount.text = context.resources.getQuantityString(R.plurals.book_pages, book.pageCount, book.pageCount)
+                binding.pageCount.visibility = android.view.View.VISIBLE
+            } else {
+                binding.pageCount.visibility = android.view.View.GONE
+            }
+
             Picasso.get()
                 .load(book.thumbnail)
                 .placeholder(R.drawable.book_placeholder)

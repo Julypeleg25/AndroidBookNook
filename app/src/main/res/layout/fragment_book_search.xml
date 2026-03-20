@@ -6,19 +6,35 @@
     android:layout_height="match_parent"
     android:background="@color/bn_beige">
 
+    <TextView
+        android:id="@+id/searchHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:text="@string/search_books_title"
+        android:textColor="@color/bn_brown_text"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/queryLayout"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:hint="Search by title/author"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="12dp"
+        android:hint="@string/search_books_hint"
+        app:boxBackgroundColor="@color/white"
         app:boxStrokeColor="@color/bn_orange"
         app:endIconMode="clear_text"
         app:hintTextColor="@color/bn_orange"
         app:layout_constraintEnd_toStartOf="@+id/doSearchBtn"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/searchHeader"
         app:startIconDrawable="@android:drawable/ic_menu_search"
         app:startIconTint="@color/bn_orange">
 
@@ -27,20 +43,94 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text"
+            android:imeOptions="actionSearch"
             android:textColor="@color/bn_brown_text" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.button.MaterialButton
+    <ImageButton
         android:id="@+id/doSearchBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:text="Search"
-        android:textColor="@color/white"
-        app:cornerRadius="12dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="20dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/search_action"
+        android:padding="8dp"
+        android:src="@android:drawable/ic_menu_search"
         app:layout_constraintBottom_toBottomOf="@+id/queryLayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/queryLayout" />
+        app:layout_constraintTop_toTopOf="@+id/queryLayout"
+        app:tint="@color/bn_orange_dark" />
+
+    <TextView
+        android:id="@+id/clearSearchBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="?attr/selectableItemBackground"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="4dp"
+        android:text="@string/search_clear_action"
+        android:textColor="@color/bn_orange_dark"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@id/queryLayout"
+        app:layout_constraintTop_toBottomOf="@id/queryLayout" />
+
+    
+    <LinearLayout
+        android:id="@+id/welcomeGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/clearSearchBtn">
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:alpha="0.7"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_book_open"
+            app:tint="@color/bn_orange" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/search_welcome_title"
+            android:textColor="@color/bn_brown_text"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/search_welcome_message"
+            android:textColor="@color/bn_secondary_text"
+            android:textSize="14sp"
+            android:lineSpacingExtra="4dp" />
+    </LinearLayout>
+
+    
+    <TextView
+        android:id="@+id/emptyText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/search_empty_state"
+        android:textColor="@color/bn_secondary_text"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/clearSearchBtn" />
 
     <ProgressBar
         android:id="@+id/loading"
@@ -51,29 +141,16 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/queryLayout" />
-
-    <TextView
-        android:id="@+id/emptyText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="No books found."
-        android:textColor="@color/bn_secondary_text"
-        android:textSize="16sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/queryLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/clearSearchBtn" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:clipToPadding="false"
         android:paddingVertical="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/queryLayout" />
+        app:layout_constraintTop_toBottomOf="@id/clearSearchBtn" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

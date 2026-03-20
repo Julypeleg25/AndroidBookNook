@@ -36,8 +36,7 @@ class BookSearchViewModel : ViewModel() {
     fun searchBooks(query: String) {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) {
-            _searchResults.value = emptyList()
-            _isEmpty.value = false
+            clearSearch()
             return
         }
 
@@ -86,11 +85,23 @@ class BookSearchViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Silently fail or log for "load more"
+                
             } finally {
                 _loadingMore.value = false
             }
         }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        currentQuery = ""
+        startIndex = 0
+        canLoadMore = true
+        _loading.value = false
+        _loadingMore.value = false
+        _error.value = null
+        _searchResults.value = emptyList()
+        _isEmpty.value = false
     }
 
     private fun mapErrorMessage(e: Exception): String {
