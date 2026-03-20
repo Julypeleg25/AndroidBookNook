@@ -3,21 +3,21 @@
     <item
         android:id="@+id/postsFragment"
         android:icon="@android:drawable/ic_menu_agenda"
-        android:title="Feed" />
+        android:title="@string/nav_feed" />
     <item
         android:id="@+id/myPostsFragment"
         android:icon="@android:drawable/ic_menu_my_calendar"
-        android:title="My Posts" />
+        android:title="@string/nav_my_posts" />
     <item
         android:id="@+id/bookSearchFragment"
         android:icon="@android:drawable/ic_input_add"
-        android:title="New" />
+        android:title="@string/nav_new" />
     <item
         android:id="@+id/wishlistFragment"
         android:icon="@android:drawable/btn_star_big_on"
-        android:title="My Lists" />
+        android:title="@string/nav_my_lists" />
     <item
         android:id="@+id/profileFragment"
         android:icon="@android:drawable/ic_menu_view"
-        android:title="Profile" />
+        android:title="@string/nav_profile" />
 </menu>
