@@ -22,12 +22,28 @@ class ProfileViewModel : ViewModel() {
 
     val user: LiveData<UserEntity?> = Model.observeLocalUser()
 
+    val inputUsername = MutableLiveData<String>()
+    val inputAvatarUri = MutableLiveData<Uri?>()
+
+    val isChanged: LiveData<Boolean> = androidx.lifecycle.MediatorLiveData<Boolean>().apply {
+        addSource(user) { value = checkChanged() }
+        addSource(inputUsername) { value = checkChanged() }
+        addSource(inputAvatarUri) { value = checkChanged() }
+    }
+
     init {
         viewModelScope.launch {
             try {
                 Model.ensureLocalProfile()
             } catch (_: Exception) { }
         }
+    }
+
+    private fun checkChanged(): Boolean {
+        val initial = user.value ?: return false
+        val currentName = inputUsername.value ?: initial.username
+        val currentAvatar = inputAvatarUri.value
+        return (currentName.trim() != initial.username.trim()) || (currentAvatar != null)
     }
 
     fun updateProfile(username: String, email: String, avatarUri: Uri?) {
@@ -37,6 +53,7 @@ class ProfileViewModel : ViewModel() {
             try {
                 Model.updateProfile(username, email, avatarUri)
                 _updateSuccess.value = true
+                inputAvatarUri.value = null 
             } catch (e: Exception) {
                 _error.value = mapErrorMessage(e)
             } finally {
