@@ -9,15 +9,17 @@ class AppLocalRepository(
     private val wishlistDao: WishlistDao,
     private val readlistDao: ReadlistDao,
     private val userDao: UserDao,
-    private val cachedBookDao: CachedBookDao
+    private val cachedBookDao: CachedBookDao,
+    private val likeDao: LikeDao,
+    private val commentDao: CommentDao
 ) {
-    fun observePosts(): LiveData<List<PostEntity>> = postDao.getAll()
-    fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = postDao.getByUser(userId)
-    fun observePost(postId: String): LiveData<PostEntity?> = postDao.getById(postId)
-    suspend fun getPost(postId: String): PostEntity? = postDao.getByIdSync(postId)
-    fun searchPosts(title: String?, author: String?, minRating: Int?, minComments: Int?) =
-        postDao.search(title, author, minRating, minComments)
-    fun searchPostsByQuery(query: String) = postDao.searchByQuery(query)
+    fun observePosts(currUid: String): LiveData<List<PostEntity>> = postDao.getAll(currUid)
+    fun observeMyPosts(userId: String, currUid: String): LiveData<List<PostEntity>> = postDao.getByUser(userId, currUid)
+    fun observePost(postId: String, currUid: String): LiveData<PostEntity?> = postDao.getById(postId, currUid)
+    suspend fun getPost(postId: String, currUid: String): PostEntity? = postDao.getByIdSync(postId, currUid)
+    fun searchPosts(title: String?, author: String?, minRating: Int?, minComments: Int?, currUid: String) =
+        postDao.search(title, author, minRating, minComments, currUid)
+    fun searchPostsByQuery(query: String, currUid: String) = postDao.searchByQuery(query, currUid)
 
     suspend fun upsertPosts(items: List<PostEntity>) = postDao.upsertAll(items)
     suspend fun upsertPost(item: PostEntity) = postDao.upsert(item)
@@ -40,4 +42,17 @@ class AppLocalRepository(
     suspend fun clearUser() = userDao.clear()
 
     suspend fun cacheBooks(items: List<CachedBookEntity>) = cachedBookDao.upsertAll(items)
+
+    // Likes
+    suspend fun isLikedSync(userId: String, postId: String) = likeDao.exists(userId, postId)
+    suspend fun upsertLike(item: LikeEntity) = likeDao.insert(item)
+    suspend fun deleteLike(userId: String, postId: String) = likeDao.delete(userId, postId)
+    suspend fun clearUserLikes(userId: String) = likeDao.clearUserLikes(userId)
+    suspend fun upsertLikes(items: List<LikeEntity>) = likeDao.insertAll(items)
+
+    // Comments
+    fun observeComments(postId: String) = commentDao.observeByPost(postId)
+    suspend fun upsertComment(item: CommentEntity) = commentDao.insert(item)
+    suspend fun upsertComments(items: List<CommentEntity>) = commentDao.insertAll(items)
+    suspend fun deleteCommentsByPost(postId: String) = commentDao.deleteByPost(postId)
 }

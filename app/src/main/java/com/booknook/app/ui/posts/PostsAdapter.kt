@@ -79,7 +79,7 @@ class PostsAdapter(
 
             binding.root.setOnClickListener { onClick(post.id) }
 
-            if (onEdit != null && onDelete != null) {
+            if (isOwnPost && onEdit != null && onDelete != null) {
                 binding.actionLayout.visibility = android.view.View.VISIBLE
                 binding.btnEdit.setOnClickListener { onEdit(post.id) }
                 binding.btnDelete.setOnClickListener { onDelete(post.id) }

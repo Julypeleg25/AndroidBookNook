@@ -80,6 +80,16 @@ class PostsViewModel : ViewModel() {
         }
     }
 
+    fun deletePost(postId: String) {
+        viewModelScope.launch {
+            try {
+                Model.deletePost(postId)
+            } catch (e: Exception) {
+                _error.value = "Failed to delete post: ${e.message}"
+            }
+        }
+    }
+
     private fun mapErrorMessage(e: Exception): String {
         val msg = e.message ?: return "Failed to refresh posts"
         return when {

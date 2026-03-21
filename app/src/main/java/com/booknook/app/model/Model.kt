@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import com.booknook.app.data.local.AppDatabase
 import com.booknook.app.data.local.entities.PostEntity
+import com.booknook.app.data.local.entities.LikeEntity
+import com.booknook.app.data.local.entities.CommentEntity
 import com.booknook.app.data.local.entities.ReadlistEntity
 import com.booknook.app.data.local.entities.UserEntity
 import com.booknook.app.data.local.entities.WishlistEntity
@@ -34,7 +36,9 @@ object Model {
             db.wishlistDao(),
             db.readlistDao(),
             db.userDao(),
-            db.cachedBookDao()
+            db.cachedBookDao(),
+            db.likeDao(),
+            db.commentDao()
         )
     }
 
@@ -66,19 +70,19 @@ object Model {
 
     suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> = api.searchBooks(query, startIndex)
 
-    fun observePosts(): LiveData<List<PostEntity>> = local.observePosts()
-    fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = local.observeMyPosts(userId)
-    fun observePost(postId: String): LiveData<PostEntity?> = local.observePost(postId)
-    suspend fun getPost(postId: String): PostEntity? = local.getPost(postId)
+    fun observePosts(): LiveData<List<PostEntity>> = local.observePosts(currentUserId() ?: "")
+    fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = local.observeMyPosts(userId, currentUserId() ?: "")
+    fun observePost(postId: String): LiveData<PostEntity?> = local.observePost(postId, currentUserId() ?: "")
+    suspend fun getPost(postId: String): PostEntity? = local.getPost(postId, currentUserId() ?: "")
 
     fun searchPosts(title: String?, author: String?, minRating: Int?, minComments: Int?) =
-        local.searchPosts(title, author, minRating, minComments)
+        local.searchPosts(title, author, minRating, minComments, currentUserId() ?: "")
 
-    fun searchPostsByQuery(query: String) = local.searchPostsByQuery(query)
+    fun searchPostsByQuery(query: String) = local.searchPostsByQuery(query, currentUserId() ?: "")
 
     suspend fun isOwnPost(postId: String): Boolean {
         val uid = currentUserId() ?: return false
-        val post = withContext(Dispatchers.IO) { local.getPost(postId) }
+        val post = withContext(Dispatchers.IO) { local.getPost(postId, uid) }
         return post?.userId == uid
     }
 
@@ -87,49 +91,56 @@ object Model {
         if (!force && now - lastRefreshTime < REFRESH_INTERVAL) return
 
         val posts = firebase.fetchAllPosts()
+        val uid = currentUserId()
+        
         withContext(Dispatchers.IO) {
             local.upsertPosts(posts)
+            
+            // If logged in, sync likes count/state accurately
+            if (uid != null) {
+                val likes = posts.filter { it.isLikedByUser }.map { 
+                    LikeEntity(userId = uid, postId = it.id) 
+                }
+                // Note: fetchAllPosts might only return isLikedByUser for the current user's feed view.
+                // We should clear and re-insert or update carefully.
+                // For simplicity, we trust the feed response for the items it contains.
+                likes.forEach { local.upsertLike(it) }
+            }
         }
         lastRefreshTime = now
     }
+
+// --- Model.kt ---
 
     suspend fun createPost(book: Book, rating: Int, review: String, imageUri: Uri?) {
         val uid = firebase.requireUserId()
         val username = firebase.fetchProfile()?.username ?: "User"
         val postId = UUID.randomUUID().toString()
-        val imageUrl = if (imageUri != null) firebase.uploadPostImage(postId, imageUri) else null
-        val now = System.currentTimeMillis()
+
+        // Path now includes UID: posts/uid/postId.jpg
+        val imageUrl = imageUri?.let { firebase.uploadPostImage(uid, postId, it) }
 
         val post = PostEntity(
-            id = postId,
-            userId = uid,
-            username = username,
-            bookId = book.id,
-            bookTitle = book.title,
-            bookAuthor = book.author,
-            bookThumbnail = book.thumbnail,
-            rating = rating,
-            review = review,
-            imageUrl = imageUrl,
-            createdAt = now,
-            likesCount = 0,
-            commentsCount = 0
+            id = postId, userId = uid, username = username,
+            bookId = book.id, bookTitle = book.title, bookAuthor = book.author,
+            bookThumbnail = book.thumbnail, rating = rating, review = review,
+            imageUrl = imageUrl, createdAt = System.currentTimeMillis()
         )
 
         firebase.createPost(post)
-        withContext(Dispatchers.IO) {
-            local.upsertPost(post)
-        }
+        withContext(Dispatchers.IO) { local.upsertPost(post) }
     }
 
     suspend fun updatePost(postId: String, rating: Int, review: String, imageUri: Uri?) {
+        val uid = firebase.requireUserId()
         val existing = firebase.getPost(postId) ?: return
-        val imageUrl = if (imageUri != null) firebase.uploadPostImage(postId, imageUri) else existing.imageUrl
+        if (existing.userId != uid) return // Security check
+
+        val imageUrl = imageUri?.let { firebase.uploadPostImage(uid, postId, it) } ?: existing.imageUrl
+
         val updated = existing.copy(rating = rating, review = review, imageUrl = imageUrl)
         firebase.updatePost(updated)
-        withContext(Dispatchers.IO) {
-            local.upsertPost(updated)
-        }
+        withContext(Dispatchers.IO) { local.upsertPost(updated) }
     }
 
     suspend fun deletePost(postId: String) {
@@ -141,7 +152,7 @@ object Model {
 
     suspend fun toggleLike(postId: String) {
         val uid = currentUserId() ?: return
-        val post = withContext(Dispatchers.IO) { local.getPost(postId) } ?: return
+        val post = withContext(Dispatchers.IO) { local.getPost(postId, uid) } ?: return
         
         if (post.userId == uid) {
             com.booknook.app.util.Logger.d("Likes", "User $uid attempted to like their own post $postId - Blocked.")
@@ -149,11 +160,19 @@ object Model {
         }
 
         // Optimistic update
-        val newIsLiked = !post.isLikedByUser
+        val isLiked = withContext(Dispatchers.IO) { local.isLikedSync(uid, postId) }
+        val newIsLiked = !isLiked
         val newCount = if (newIsLiked) post.likesCount + 1 else (post.likesCount - 1).coerceAtLeast(0)
-        val optimisticPost = post.copy(isLikedByUser = newIsLiked, likesCount = newCount)
         
-        withContext(Dispatchers.IO) { local.upsertPost(optimisticPost) }
+        withContext(Dispatchers.IO) {
+            if (newIsLiked) {
+                local.upsertLike(LikeEntity(uid, postId))
+            } else {
+                local.deleteLike(uid, postId)
+            }
+            // Update post count optimistically
+            local.upsertPost(post.copy(likesCount = newCount))
+        }
         com.booknook.app.util.Logger.d("Likes", "Optimistic update for $postId: Liked=$newIsLiked, Count=$newCount")
 
         try {
@@ -168,19 +187,36 @@ object Model {
         } catch (e: Exception) {
             com.booknook.app.util.Logger.e("Likes", "Backend sync failed for $postId. Reverting local state.", e)
             // Revert optimistic update
-            withContext(Dispatchers.IO) { local.upsertPost(post) }
+            withContext(Dispatchers.IO) {
+                if (isLiked) {
+                    local.upsertLike(LikeEntity(uid, postId))
+                } else {
+                    local.deleteLike(uid, postId)
+                }
+                local.upsertPost(post)
+            }
             throw e
         }
     }
 
-    suspend fun addComment(postId: String, text: String) {
-        val post = withContext(Dispatchers.IO) { local.getPost(postId) } ?: return
+    fun observeComments(postId: String) = local.observeComments(postId)
 
-        // Optimistic update
+    suspend fun refreshComments(postId: String) {
+        val comments = firebase.fetchComments(postId)
+        withContext(Dispatchers.IO) {
+            local.deleteCommentsByPost(postId)
+            local.upsertComments(comments)
+        }
+    }
+
+    suspend fun addComment(postId: String, text: String) {
+        val uid = currentUserId() ?: return
+        val post = withContext(Dispatchers.IO) { local.getPost(postId, uid) } ?: return
+
+        // Optimistic update for count
         val optimisticPost = post.copy(commentsCount = post.commentsCount + 1)
         withContext(Dispatchers.IO) { local.upsertPost(optimisticPost) }
-        com.booknook.app.util.Logger.d("Comments", "Optimistic count update for $postId: ${optimisticPost.commentsCount}")
-
+        
         try {
             firebase.addComment(postId, text)
             // Sync with network source of truth
@@ -188,6 +224,7 @@ object Model {
             if (fresh != null) {
                 withContext(Dispatchers.IO) { local.upsertPost(fresh) }
             }
+            refreshComments(postId)
         } catch (e: Exception) {
             com.booknook.app.util.Logger.e("Comments", "Comment sync failed", e)
             // Revert optimistic update

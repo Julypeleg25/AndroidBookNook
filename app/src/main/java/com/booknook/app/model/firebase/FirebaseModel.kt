@@ -13,6 +13,7 @@ import kotlinx.coroutines.withTimeout
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.google.firebase.auth.userProfileChangeRequest
 import java.util.UUID
 
 class FirebaseModel {
@@ -29,7 +30,13 @@ class FirebaseModel {
     suspend fun register(email: String, password: String, username: String, avatarUri: Uri? = null) {
         com.booknook.app.util.Logger.d("Auth", "Registering user: $email")
         val res = auth.createUserWithEmailAndPassword(email, password).await()
-        val uid = res.user?.uid ?: throw IllegalStateException("Registration failed: No UID")
+        val user = res.user ?: throw IllegalStateException("Registration failed: No User")
+        val uid = user.uid
+
+        val profileUpdates = com.google.firebase.auth.userProfileChangeRequest {
+            displayName = username
+        }
+        user.updateProfile(profileUpdates).await()
         
         var avatarUrl: String? = null
         if (avatarUri != null) {
@@ -78,15 +85,25 @@ class FirebaseModel {
         )
     }
 
+
     suspend fun updateProfile(username: String, email: String, avatarUri: Uri?): UserEntity {
         val uid = requireUserId()
-        val avatarUrl = if (avatarUri != null) uploadAvatar(uid, avatarUri) else fetchProfile()?.avatarUrl
-        val data = mutableMapOf<String, Any?>(
-            "username" to username,
-            "email" to email,
-            "avatarUrl" to avatarUrl
-        )
-        db.collection("users").document(uid).set(data).await()
+        val user = auth.currentUser ?: throw IllegalStateException("No auth user")
+
+        if (user.displayName != username) {
+            val profileUpdates = userProfileChangeRequest { displayName = username }
+            user.updateProfile(profileUpdates).await()
+        }
+
+        val avatarUrl = if (avatarUri != null) {
+            uploadAvatar(uid, avatarUri)
+        } else {
+            fetchProfile()?.avatarUrl
+        }
+
+        val data = mapOf("username" to username, "avatarUrl" to avatarUrl)
+        db.collection("users").document(uid).update(data).await()
+
         return UserEntity(id = uid, username = username, email = email, avatarUrl = avatarUrl)
     }
 
@@ -96,25 +113,48 @@ class FirebaseModel {
         return ref.downloadUrl.await().toString()
     }
 
-    suspend fun uploadPostImage(postId: String, uri: Uri): String {
-        val ref = storage.reference.child("posts/$postId.jpg")
+    suspend fun uploadPostImage(userId: String, postId: String, uri: Uri): String {
+        val ref = storage.reference.child("posts/$userId/$postId.jpg")
         ref.putFile(uri).await()
         return ref.downloadUrl.await().toString()
     }
 
-    suspend fun createPost(post: PostEntity) {
-        com.booknook.app.util.Logger.d("Firestore", "Creating post: ${post.id} for book: ${post.bookTitle}")
-        db.collection("posts").document(post.id).set(post.toMap()).await()
-        com.booknook.app.util.Logger.d("Firestore", "Post ${post.id} created successfully")
+    suspend fun updatePost(post: PostEntity) {
+        val uid = requireUserId()
+
+        if (post.userId != uid) {
+            throw IllegalStateException("Unauthorized: You do not own this post.")
+        }
+
+        com.booknook.app.util.Logger.d("Firestore", "Updating post: ${post.id}")
+
+        db.collection("posts")
+            .document(post.id)
+            .set(post.toMap())
+            .await()
+
+        com.booknook.app.util.Logger.d("Firestore", "Post ${post.id} updated successfully")
     }
 
-    suspend fun updatePost(post: PostEntity) {
+    suspend fun createPost(post: PostEntity) {
         db.collection("posts").document(post.id).set(post.toMap()).await()
     }
 
     suspend fun deletePost(postId: String) {
+        val post = getPost(postId) ?: return
+        val uid = requireUserId()
+
+        if (post.userId != uid) throw Exception("Unauthorized deletion attempt")
+
         db.collection("posts").document(postId).delete().await()
-        try { storage.reference.child("posts/$postId.jpg").delete().await() } catch (_: Exception) {}
+
+        if (!post.imageUrl.isNullOrEmpty()) {
+            try {
+                storage.reference.child("posts/$uid/$postId.jpg").delete().await()
+            } catch (e: Exception) {
+                com.booknook.app.util.Logger.d("Firebase", "Storage file already gone or missing")
+            }
+        }
     }
 
     suspend fun getPost(postId: String): PostEntity? {
@@ -135,7 +175,6 @@ class FirebaseModel {
         
         val uid = currentUserId() ?: return posts.sortedByDescending { it.createdAt }
         
-        // Fetch all liked post IDs for the current user using collection group query
         val likedPostIds = try {
             db.collectionGroup("likes")
                 .whereEqualTo(FieldPath.documentId(), uid)
@@ -179,18 +218,35 @@ class FirebaseModel {
         val uid = requireUserId()
         val profile = fetchProfile()
         val commentId = UUID.randomUUID().toString()
+        val commentData = mapOf(
+            "id" to commentId,
+            "userId" to uid,
+            "username" to (profile?.username ?: "User"),
+            "text" to text,
+            "createdAt" to System.currentTimeMillis()
+        )
+        
         db.collection("posts").document(postId)
             .collection("comments").document(commentId)
-            .set(mapOf(
-                "id" to commentId,
-                "userId" to uid,
-                "username" to (profile?.username ?: "User"),
-                "text" to text,
-                "createdAt" to System.currentTimeMillis()
-            )).await()
+            .set(commentData).await()
 
         db.collection("posts").document(postId)
             .update("commentsCount", FieldValue.increment(1)).await()
+    }
+
+    suspend fun fetchComments(postId: String): List<com.booknook.app.data.local.entities.CommentEntity> {
+        val snap = db.collection("posts").document(postId)
+            .collection("comments").orderBy("createdAt").get().await()
+        return snap.documents.mapNotNull { doc ->
+            com.booknook.app.data.local.entities.CommentEntity(
+                id = doc.getString("id") ?: "",
+                postId = postId,
+                userId = doc.getString("userId") ?: "",
+                username = doc.getString("username") ?: "User",
+                text = doc.getString("text") ?: "",
+                createdAt = doc.getLong("createdAt") ?: 0L
+            )
+        }
     }
 }
 

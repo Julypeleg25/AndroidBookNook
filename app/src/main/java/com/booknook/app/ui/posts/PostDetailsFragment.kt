@@ -16,13 +16,19 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
     private var _binding: FragmentPostDetailsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: PostDetailsViewModel by viewModels()
+    private val commentsAdapter = CommentsAdapter()
     private lateinit var postId: String
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentPostDetailsBinding.bind(view)
         postId = PostDetailsFragmentArgs.fromBundle(requireArguments()).postId
 
+        binding.commentsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
+        binding.commentsRecyclerView.adapter = commentsAdapter
+
         observeViewModel()
+        viewModel.refreshComments(postId)
 
         binding.likeBtn.setOnClickListener {
             viewModel.toggleLike(postId)
@@ -95,6 +101,10 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
                 .fit()
                 .centerCrop()
                 .into(binding.postImage)
+        }
+
+        viewModel.observeComments(postId).observe(viewLifecycleOwner) { comments ->
+            commentsAdapter.submitList(comments)
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
