@@ -8,18 +8,21 @@ import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.databinding.RowPostBinding
+import com.booknook.app.util.formatRelativeTime
 import com.squareup.picasso.Picasso
+import java.text.NumberFormat
 
 class PostsAdapter(
     private val currentUserId: String?,
     private val onClick: (String) -> Unit,
+    private val showEngagement: Boolean = true,
     private val onLike: ((String) -> Unit)? = null,
     private val onEdit: ((String) -> Unit)? = null,
     private val onDelete: ((String) -> Unit)? = null
 ) : ListAdapter<PostEntity, PostsAdapter.Holder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        return Holder(RowPostBinding.inflate(LayoutInflater.from(parent.context), parent, false), currentUserId, onClick, onLike, onEdit, onDelete)
+        return Holder(RowPostBinding.inflate(LayoutInflater.from(parent.context), parent, false), currentUserId, onClick, showEngagement, onLike, onEdit, onDelete)
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
@@ -40,33 +43,57 @@ class PostsAdapter(
         private val binding: RowPostBinding,
         private val currentUserId: String?,
         private val onClick: (String) -> Unit,
+        private val showEngagement: Boolean,
         private val onLike: ((String) -> Unit)?,
         private val onEdit: ((String) -> Unit)?,
         private val onDelete: ((String) -> Unit)?
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(post: PostEntity) {
+            val context = binding.root.context
             binding.title.text = post.bookTitle
             binding.author.text = post.bookAuthor
             binding.rating.rating = post.rating.toFloat()
-            binding.meta.text = "${post.username}  •  ${formatTime(post.createdAt)}"
+            binding.meta.text = context.getString(
+                R.string.post_meta_format,
+                post.username,
+                context.formatRelativeTime(post.createdAt)
+            )
+
+            val infoParts = mutableListOf<String>()
+            if (!post.bookGenre.isNullOrBlank()) infoParts.add(post.bookGenre)
+            if (post.bookPageCount != null && post.bookPageCount > 0) {
+                infoParts.add(context.resources.getQuantityString(R.plurals.book_pages, post.bookPageCount, post.bookPageCount))
+            }
             
-            binding.tvLikesCount.text = post.likesCount.toString()
-            binding.tvCommentsCount.text = post.commentsCount.toString()
+            if (infoParts.isNotEmpty()) {
+                binding.bookInfo.text = infoParts.joinToString("  •  ")
+                binding.bookInfo.visibility = android.view.View.VISIBLE
+            } else {
+                binding.bookInfo.visibility = android.view.View.GONE
+            }
             
             val isOwnPost = post.userId == currentUserId
-            val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-            binding.btnLike.setImageResource(likeIcon)
-            
-            // Interaction logic: Disable like for own posts
-            if (isOwnPost) {
-                binding.btnLike.isEnabled = false
-                binding.btnLike.alpha = 0.5f // Visual hint
-                binding.btnLike.setOnClickListener(null)
+            if (showEngagement) {
+                binding.engagementLayout.visibility = android.view.View.VISIBLE
+                val numberFormat = NumberFormat.getIntegerInstance()
+                binding.tvLikesCount.text = numberFormat.format(post.likesCount)
+                binding.tvCommentsCount.text = numberFormat.format(post.commentsCount)
+
+                val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+                binding.btnLike.setIconResource(likeIcon)
+
+                if (isOwnPost) {
+                    binding.btnLike.isEnabled = false
+                    binding.btnLike.alpha = 0.5f
+                    binding.btnLike.setOnClickListener(null)
+                } else {
+                    binding.btnLike.isEnabled = true
+                    binding.btnLike.alpha = 1.0f
+                    binding.btnLike.setOnClickListener { onLike?.invoke(post.id) }
+                }
             } else {
-                binding.btnLike.isEnabled = true
-                binding.btnLike.alpha = 1.0f
-                binding.btnLike.setOnClickListener { onLike?.invoke(post.id) }
+                binding.engagementLayout.visibility = android.view.View.GONE
             }
             
             Picasso.get()
@@ -85,16 +112,6 @@ class PostsAdapter(
                 binding.btnDelete.setOnClickListener { onDelete(post.id) }
             } else {
                 binding.actionLayout.visibility = android.view.View.GONE
-            }
-        }
-
-        private fun formatTime(timestamp: Long): String {
-            val diff = System.currentTimeMillis() - timestamp
-            return when {
-                diff < 60000 -> "Just now"
-                diff < 3600000 -> "${diff / 60000}m ago"
-                diff < 86400000 -> "${diff / 3600000}h ago"
-                else -> "${diff / 86400000}d ago"
             }
         }
     }

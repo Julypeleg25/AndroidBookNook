@@ -15,23 +15,26 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:padding="16dp">
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/thumb"
             android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_height="80dp"
+            android:contentDescription="@null"
             android:scaleType="centerCrop"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
-            tools:src="@drawable/ic_launcher_foreground" />
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Small"
+            tools:src="@drawable/book_placeholder" />
 
         <TextView
             android:id="@+id/title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="20dp"
+            android:ellipsize="end"
+            android:maxLines="2"
             android:textColor="@color/bn_brown_text"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -44,6 +47,7 @@
             android:id="@+id/author"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:textColor="@color/bn_secondary_text"
             android:textSize="13sp"
             app:layout_constraintEnd_toStartOf="@id/btnRemove"
@@ -51,11 +55,45 @@
             app:layout_constraintTop_toBottomOf="@id/title"
             tools:text="Author Name" />
 
+        <TextView
+            android:id="@+id/genre"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/bn_orange_dark"
+            android:textSize="12sp"
+            android:textStyle="italic"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@id/btnRemove"
+            app:layout_constraintStart_toStartOf="@id/title"
+            app:layout_constraintTop_toBottomOf="@id/author"
+            tools:text="Fiction"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/pageCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="2"
+            android:textColor="@color/bn_secondary_text"
+            android:textSize="11sp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@id/btnRemove"
+            app:layout_constraintStart_toStartOf="@id/title"
+            app:layout_constraintTop_toBottomOf="@id/genre"
+            tools:text="320 pages"
+            tools:visibility="visible" />
+
         <ImageButton
             android:id="@+id/btnRemove"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/book_remove_button"
             android:src="@android:drawable/ic_menu_delete"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"

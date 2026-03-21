@@ -8,8 +8,8 @@
     android:layout_marginHorizontal="12dp"
     android:layout_marginVertical="6dp"
     app:cardBackgroundColor="@color/white"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
     app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -21,6 +21,7 @@
             android:id="@+id/thumb"
             android:layout_width="64dp"
             android:layout_height="64dp"
+            android:contentDescription="@null"
             android:scaleType="centerCrop"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -33,7 +34,7 @@
             android:id="@+id/title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="20dp"
             android:textColor="@color/bn_brown_text"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -53,6 +54,21 @@
             app:layout_constraintTop_toBottomOf="@id/title"
             tools:text="Author Name" />
 
+        <TextView
+            android:id="@+id/bookInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/bn_orange_dark"
+            android:textSize="12sp"
+            android:textStyle="italic"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@+id/actionLayout"
+            app:layout_constraintStart_toStartOf="@id/title"
+            app:layout_constraintTop_toBottomOf="@id/author"
+            tools:text="Fiction / Fantasy · 320 pages"
+            tools:visibility="visible" />
+
         <RatingBar
             android:id="@+id/rating"
             style="?android:attr/ratingBarStyleSmall"
@@ -64,7 +80,7 @@
             android:progressTint="@color/bn_orange"
             android:stepSize="1"
             app:layout_constraintStart_toStartOf="@id/title"
-            app:layout_constraintTop_toBottomOf="@id/author" />
+            app:layout_constraintTop_toBottomOf="@id/bookInfo" />
 
         <TextView
             android:id="@+id/meta"
@@ -88,32 +104,38 @@
             app:layout_constraintStart_toStartOf="@id/title"
             app:layout_constraintTop_toBottomOf="@id/meta">
 
-            <ImageView
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLike"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_heart_outline"
-                app:tint="@color/bn_pink"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+                style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/post_like_action"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:iconPadding="0dp"
+                app:icon="@drawable/ic_heart_outline"
+                app:iconTint="@color/bn_secondary_text" />
 
             <TextView
                 android:id="@+id/tvLikesCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="10dp"
                 android:textColor="@color/bn_secondary_text"
-                android:textSize="14sp"
-                tools:text="12" />
+                android:textSize="12sp" />
 
             <ImageView
-                android:id="@+id/ivComment"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:layout_marginStart="16dp"
+                android:contentDescription="@null"
                 android:src="@drawable/ic_comment_outline"
-                app:tint="@color/bn_orange" />
+                app:tint="@color/bn_secondary_text" />
 
             <TextView
                 android:id="@+id/tvCommentsCount"
@@ -121,8 +143,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:textColor="@color/bn_secondary_text"
-                android:textSize="14sp"
-                tools:text="5" />
+                android:textSize="12sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -139,6 +160,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/edit_post_action"
                 android:src="@android:drawable/ic_menu_edit"
                 app:tint="@color/bn_orange" />
 
@@ -147,6 +169,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/delete_post_action"
                 android:src="@android:drawable/ic_menu_delete"
                 app:tint="@color/bn_pink_dark" />
         </LinearLayout>
