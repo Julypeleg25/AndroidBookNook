@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    kotlin("kapt")
+    alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.navigation.safeargs)
 }
@@ -13,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.booknook.app"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -31,6 +31,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    lint {
+        disable += "NotificationPermission"
     }
 }
 
@@ -50,7 +54,7 @@ dependencies {
 
     // Room
     implementation(libs.room.runtime)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
     // Retrofit
