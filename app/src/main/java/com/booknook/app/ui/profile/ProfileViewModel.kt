@@ -22,6 +22,14 @@ class ProfileViewModel : ViewModel() {
 
     val user: LiveData<UserEntity?> = Model.observeLocalUser()
 
+    init {
+        viewModelScope.launch {
+            try {
+                Model.ensureLocalProfile()
+            } catch (_: Exception) { }
+        }
+    }
+
     fun updateProfile(username: String, email: String, avatarUri: Uri?) {
         _loading.value = true
         _error.value = null
@@ -30,7 +38,7 @@ class ProfileViewModel : ViewModel() {
                 Model.updateProfile(username, email, avatarUri)
                 _updateSuccess.value = true
             } catch (e: Exception) {
-                _error.value = e.message ?: "Update failed"
+                _error.value = mapErrorMessage(e)
             } finally {
                 _loading.value = false
             }
@@ -45,5 +53,15 @@ class ProfileViewModel : ViewModel() {
 
     fun resetUpdateSuccess() {
         _updateSuccess.value = false
+    }
+
+    private fun mapErrorMessage(e: Exception): String {
+        val msg = e.message ?: return "Update failed"
+        return when {
+            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) -> 
+                "Device is offline. Changes will sync when online."
+            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
+            else -> msg
+        }
     }
 }

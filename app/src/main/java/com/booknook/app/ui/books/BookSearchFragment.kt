@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentBookSearchBinding
 import com.google.android.material.snackbar.Snackbar
@@ -31,8 +32,25 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentBookSearchBinding.bind(view)
 
-        binding.recycler.layoutManager = LinearLayoutManager(requireContext())
+        val layoutManager = LinearLayoutManager(requireContext())
+        binding.recycler.layoutManager = layoutManager
         binding.recycler.adapter = adapter
+
+        // Pagination: load more when reaching the bottom
+        binding.recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy > 0) { // scrolling down
+                    val visibleItemCount = layoutManager.childCount
+                    val totalItemCount = layoutManager.itemCount
+                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount && firstVisibleItemPosition >= 0) {
+                        viewModel.loadMore()
+                    }
+                }
+            }
+        })
 
         observeViewModel()
 
@@ -53,13 +71,16 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
             binding.loading.isVisible = isLoading
-            if (isLoading) {
-                binding.doSearchBtn.isEnabled = false
-            } else {
-                binding.doSearchBtn.postDelayed({
-                    _binding?.let { it.doSearchBtn.isEnabled = true }
-                }, 1000)
-            }
+            binding.doSearchBtn.isEnabled = !isLoading
+        }
+
+        viewModel.loadingMore.observe(viewLifecycleOwner) { isLoadingMore ->
+            // We can show a small indicator or just let it be. 
+            // For now, let's just make it smooth.
+        }
+
+        viewModel.isEmpty.observe(viewLifecycleOwner) { empty ->
+            binding.emptyText.isVisible = empty
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->

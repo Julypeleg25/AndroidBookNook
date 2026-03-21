@@ -10,7 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
-import com.booknook.app.model.Model
+import com.booknook.app.ui.auth.Event
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 
@@ -25,7 +25,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             pickedImage = it
-            binding.imagePreview.isVisible = true
+            binding.imageCard.isVisible = true
             Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
         }
     }
@@ -49,21 +49,20 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
                 Snackbar.make(binding.root, "Rating and review required", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
             viewModel.updatePost(postId, rating, review, pickedImage)
         }
     }
 
     private fun observeViewModel() {
-        Model.observePost(postId).observe(viewLifecycleOwner) { post ->
+        viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
             if (post == null) return@observe
             binding.bookTitle.text = post.bookTitle
             binding.bookAuthor.text = post.bookAuthor
             binding.ratingBar.rating = post.rating.toFloat()
             binding.reviewInput.setText(post.review)
-            
+
             if (pickedImage == null && !post.imageUrl.isNullOrBlank()) {
-                binding.imagePreview.isVisible = true
+                binding.imageCard.isVisible = true
                 Picasso.get().load(post.imageUrl).fit().centerCrop().into(binding.imagePreview)
             }
         }
@@ -73,11 +72,12 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
             binding.publishBtn.isEnabled = !isLoading
         }
 
-        viewModel.saveSuccess.observe(viewLifecycleOwner) { success ->
-            if (success) {
-                Snackbar.make(binding.root, "Updated successfully", Snackbar.LENGTH_SHORT).show()
-                viewModel.resetSaveSuccess()
-                findNavController().popBackStack()
+        viewModel.saveSuccess.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { success ->
+                if (success) {
+                    Snackbar.make(binding.root, "Updated successfully", Snackbar.LENGTH_SHORT).show()
+                    findNavController().popBackStack()
+                }
             }
         }
 

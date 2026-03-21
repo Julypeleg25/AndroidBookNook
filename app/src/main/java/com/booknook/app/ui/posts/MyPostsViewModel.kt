@@ -25,9 +25,9 @@ class MyPostsViewModel : ViewModel() {
         _loading.value = true
         viewModelScope.launch {
             try {
-                Model.refreshPosts()
+                Model.refreshPosts(force = true)
             } catch (e: Exception) {
-                _error.value = "Failed to refresh posts"
+                _error.value = mapErrorMessage(e, "Failed to refresh posts")
             } finally {
                 _loading.value = false
             }
@@ -39,8 +39,38 @@ class MyPostsViewModel : ViewModel() {
             try {
                 Model.deletePost(postId)
             } catch (e: Exception) {
-                _error.value = "Failed to delete post"
+                _error.value = mapErrorMessage(e, "Failed to delete post")
             }
+        }
+    }
+
+    private val _isLikeProcessing = MutableLiveData<Boolean>(false)
+
+    fun toggleLike(postId: String) {
+        if (_isLikeProcessing.value == true) return
+        _isLikeProcessing.value = true
+        com.booknook.app.util.Logger.d("MyPostsVM", "User toggled like for $postId")
+        
+        viewModelScope.launch {
+            try {
+                Model.toggleLike(postId)
+            } catch (e: Exception) {
+                com.booknook.app.util.Logger.e("MyPostsVM", "Like toggle failed for $postId", e)
+                _error.value = "Failed to update like"
+            } finally {
+                _isLikeProcessing.value = false
+            }
+        }
+    }
+
+
+    private fun mapErrorMessage(e: Exception, default: String): String {
+        val msg = e.message ?: return default
+        return when {
+            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) -> 
+                "Device is offline. Please check your connection."
+            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
+            else -> msg
         }
     }
 }

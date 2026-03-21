@@ -15,6 +15,12 @@ interface WishlistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(item: WishlistEntity)
 
+    @Query("SELECT COUNT(*) > 0 FROM wishlist WHERE key = :key")
+    fun observeExistsByKey(key: String): LiveData<Boolean>
+
+    @Query("SELECT COUNT(*) > 0 FROM wishlist WHERE key = :key")
+    suspend fun existsByKey(key: String): Boolean
+
     @Query("DELETE FROM wishlist WHERE key = :key")
     suspend fun deleteByKey(key: String)
 }

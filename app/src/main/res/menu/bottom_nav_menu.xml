@@ -5,9 +5,9 @@
         android:icon="@android:drawable/ic_menu_agenda"
         android:title="Feed" />
     <item
-        android:id="@+id/filtersFragment"
-        android:icon="@android:drawable/ic_menu_search"
-        android:title="Search" />
+        android:id="@+id/myPostsFragment"
+        android:icon="@android:drawable/ic_menu_my_calendar"
+        android:title="My Posts" />
     <item
         android:id="@+id/bookSearchFragment"
         android:icon="@android:drawable/ic_input_add"

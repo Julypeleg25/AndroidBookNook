@@ -11,13 +11,16 @@ private interface GoogleBooksApi {
     @GET("volumes")
     suspend fun search(
         @Query("q") q: String,
-        @Query("maxResults") maxResults: Int = 20
+        @Query("startIndex") startIndex: Int = 0,
+        @Query("maxResults") maxResults: Int = 40
     ): SearchResponseDto
 }
 
 class ApiModel {
 
-    private val cache = mutableMapOf<String, List<Book>>()
+    companion object {
+        const val MAX_RESULTS_PER_PAGE = 40
+    }
 
     private val api: GoogleBooksApi by lazy {
         Retrofit.Builder()
@@ -27,23 +30,31 @@ class ApiModel {
             .create(GoogleBooksApi::class.java)
     }
 
-    suspend fun searchBooks(query: String): List<Book> {
+    suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> {
         val q = query.lowercase().trim()
         if (q.isBlank()) return emptyList()
 
-        cache[q]?.let { return it }
+        // Improve relevance with intitle: OR inauthor:
+        val refinedQuery = "intitle:\"$q\" OR inauthor:\"$q\""
+        
+        com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $refinedQuery (startIndex: $startIndex)")
+        val res = try {
+            api.search(refinedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
+        } catch (e: Exception) {
+            com.booknook.app.util.Logger.e("GoogleBooks", "Search failed for $refinedQuery", e)
+            return emptyList()
+        }
 
-        val res = api.search(q)
-        val items = res.items ?: emptyList()
-        val books = items.map {
+        val items = res.items ?: return emptyList()
+
+        return items.map { dto ->
             Book(
-                id = it.id,
-                title = it.volumeInfo.title ?: "",
-                author = it.volumeInfo.authors?.joinToString(", ") ?: "",
-                thumbnail = it.volumeInfo.imageLinks?.thumbnail?.replace("http://", "https://")
+                id = dto.id,
+                title = dto.volumeInfo.title ?: "",
+                author = dto.volumeInfo.authors?.joinToString(", ") ?: "",
+                thumbnail = dto.volumeInfo.imageLinks?.thumbnail
+                    ?.replace("http://", "https://")
             )
         }
-        cache[q] = books
-        return books
     }
 }

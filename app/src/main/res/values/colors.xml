@@ -12,9 +12,4 @@
     <color name="bn_pink_dark">#B06A79</color>
     <color name="bn_brown_text">#4B3A32</color>
     <color name="bn_secondary_text">#78665E</color>
-
-    <color name="purple_500">#D8894B</color>
-    <color name="purple_700">#B86D35</color>
-    <color name="teal_200">#D68A98</color>
-    <color name="teal_700">#B06A79</color>
 </resources>
