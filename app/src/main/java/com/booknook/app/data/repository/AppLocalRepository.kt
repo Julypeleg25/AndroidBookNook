@@ -42,6 +42,8 @@ class AppLocalRepository(
     suspend fun clearUser() = userDao.clear()
 
     suspend fun cacheBooks(items: List<CachedBookEntity>) = cachedBookDao.upsertAll(items)
+    suspend fun searchCachedBooks(query: String, limit: Int, offset: Int) = cachedBookDao.search(query, limit, offset)
+    suspend fun getCachedBook(bookId: String) = cachedBookDao.getById(bookId)
 
     suspend fun isLikedSync(userId: String, postId: String) = likeDao.exists(userId, postId)
     suspend fun upsertLike(item: LikeEntity) = likeDao.insert(item)
