@@ -5,12 +5,14 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentProfileBinding
 import com.google.android.material.snackbar.Snackbar
+import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
@@ -23,6 +25,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             selectedAvatarUri = it
+            viewModel.inputAvatarUri.value = it
             Picasso.get().load(it).fit().centerCrop().into(binding.avatarImage)
         }
     }
@@ -32,6 +35,10 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         _binding = FragmentProfileBinding.bind(view)
 
         observeViewModel()
+
+        binding.usernameInput.doOnTextChanged { text, _, _, _ ->
+            viewModel.inputUsername.value = text?.toString().orEmpty()
+        }
 
         binding.pickAvatarBtn.setOnClickListener {
             pickImageLauncher.launch("image/*")
@@ -43,7 +50,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             if (username.isNotEmpty() && user != null) {
                 viewModel.updateProfile(username, user.email, selectedAvatarUri)
             } else if (username.isEmpty()) {
-                Snackbar.make(binding.root, "Username is required", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(R.string.profile_required_error), Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
         }
 
@@ -56,7 +64,9 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private fun observeViewModel() {
         viewModel.user.observe(viewLifecycleOwner) { user ->
             user?.let {
-                binding.usernameInput.setText(it.username)
+                if (binding.usernameInput.text.isNullOrEmpty()) {
+                    binding.usernameInput.setText(it.username)
+                }
                 binding.emailInput.setText(it.email)
                 if (selectedAvatarUri == null && !it.avatarUrl.isNullOrBlank()) {
                     Picasso.get()
@@ -70,21 +80,26 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             }
         }
 
+        viewModel.isChanged.observe(viewLifecycleOwner) { isChanged ->
+            binding.saveBtn.isEnabled = isChanged && viewModel.loading.value != true
+        }
+
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
             binding.loading.isVisible = isLoading
-            binding.saveBtn.isEnabled = !isLoading
+            binding.saveBtn.isEnabled = !isLoading && viewModel.isChanged.value == true
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
 
         viewModel.updateSuccess.observe(viewLifecycleOwner) { success ->
             if (success) {
-                Snackbar.make(binding.root, "Profile updated", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.profile_updated, Snackbar.LENGTH_SHORT).show()
                 viewModel.resetUpdateSuccess()
+                selectedAvatarUri = null
             }
         }
     }

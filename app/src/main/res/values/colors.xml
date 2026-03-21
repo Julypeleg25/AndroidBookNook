@@ -12,4 +12,5 @@
     <color name="bn_pink_dark">#B06A79</color>
     <color name="bn_brown_text">#4B3A32</color>
     <color name="bn_secondary_text">#78665E</color>
+    <color name="gray">#808080</color>
 </resources>

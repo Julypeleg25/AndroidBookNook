@@ -1,146 +1,153 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bn_beige">
+    android:background="@color/bn_beige"
+    android:fillViewport="true">
 
-    <View
-        android:id="@+id/headerBackground"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="180dp"
-        android:background="@color/bn_orange"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="wrap_content">
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/profileCard"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="100dp"
-        app:cardBackgroundColor="@color/white"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <View
+            android:id="@+id/headerBackground"
             android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:background="@color/bn_orange"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/profileCard"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:padding="24dp">
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="100dp"
+            app:cardBackgroundColor="@color/white"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/avatarImage"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:padding="4dp"
-                android:scaleType="centerCrop"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
-                app:strokeColor="@color/bn_orange"
-                app:strokeWidth="3dp"
-                tools:src="@drawable/ic_launcher_foreground" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/pickAvatarBtn"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Change Avatar"
-                android:textColor="@color/bn_orange"
-                android:textSize="12sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/avatarImage" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/usernameLayout"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Username"
-                app:boxStrokeColor="@color/bn_orange"
-                app:hintTextColor="@color/bn_orange"
-                app:layout_constraintTop_toBottomOf="@id/pickAvatarBtn"
-                app:startIconDrawable="@drawable/ic_launcher_foreground"
-                app:startIconTint="@color/bn_orange">
+                android:padding="24dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/usernameInput"
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/avatarImage"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:padding="4dp"
+                    android:scaleType="centerCrop"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+                    app:strokeColor="@color/bn_orange"
+                    app:strokeWidth="3dp"
+                    tools:src="@drawable/ic_launcher_foreground" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/pickAvatarBtn"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_change_avatar"
+                    android:textColor="@color/bn_orange"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/avatarImage" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/usernameLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textPersonName"
-                    android:textColor="@color/bn_brown_text" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/profile_username_hint"
+                    app:boxStrokeColor="@color/bn_orange"
+                    app:hintTextColor="@color/bn_orange"
+                    app:layout_constraintTop_toBottomOf="@id/pickAvatarBtn"
+                    app:startIconDrawable="@drawable/ic_profile_username"
+                    app:startIconTint="@color/bn_orange">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/emailLayout"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:alpha="0.7"
-                android:hint="Email"
-                app:boxBackgroundColor="@color/bn_beige_dark"
-                app:boxStrokeColor="@color/bn_orange"
-                app:hintTextColor="@color/bn_orange"
-                app:layout_constraintTop_toBottomOf="@id/usernameLayout"
-                app:startIconDrawable="@drawable/ic_launcher_foreground"
-                app:startIconTint="@color/bn_orange">
-                
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/emailInput"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/usernameInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName"
+                        android:textColor="@color/bn_brown_text" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/emailLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:alpha="0.5"
-                    android:enabled="false"
-                    android:focusable="false"
-                    android:inputType="textEmailAddress"
-                    android:textColor="@color/bn_secondary_text" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="12dp"
+                    android:alpha="0.7"
+                    android:hint="@string/profile_email_hint"
+                    app:boxBackgroundColor="@color/bn_beige_dark"
+                    app:boxStrokeColor="@color/bn_orange"
+                    app:hintTextColor="@color/bn_orange"
+                    app:layout_constraintTop_toBottomOf="@id/usernameLayout"
+                    app:startIconDrawable="@drawable/ic_profile_email"
+                    app:startIconTint="@color/bn_orange">
+                    
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/emailInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.5"
+                        android:enabled="false"
+                        android:focusable="false"
+                        android:inputType="textEmailAddress"
+                        android:textColor="@color/bn_secondary_text" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/saveBtn"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="24dp"
-                android:backgroundTint="@color/bn_orange"
-                android:text="Save Profile"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                app:cornerRadius="16dp"
-                app:layout_constraintTop_toBottomOf="@id/emailLayout" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/saveBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="24dp"
+                    android:backgroundTint="@color/bn_orange"
+                    android:text="@string/profile_save_button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    app:cornerRadius="16dp"
+                    app:layout_constraintTop_toBottomOf="@id/emailLayout" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/logoutBtn"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Logout"
-                android:textAllCaps="false"
-                android:textColor="@color/bn_pink_dark"
-                app:layout_constraintTop_toBottomOf="@id/saveBtn" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/logoutBtn"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/profile_logout_button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/bn_pink_dark"
+                    app:layout_constraintTop_toBottomOf="@id/saveBtn" />
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </com.google.android.material.card.MaterialCardView>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-    <ProgressBar
-        android:id="@+id/loading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:indeterminateTint="@color/bn_orange"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/profileCard" />
+        <ProgressBar
+            android:id="@+id/loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp"
+            android:indeterminateTint="@color/bn_orange"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/profileCard" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

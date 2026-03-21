@@ -20,7 +20,7 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host) as NavHostFragment
         val navController = navHostFragment.navController
 
-        // Proactive auth guard: Set start destination BEFORE inflating the graph
+        
         val navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
         navGraph.setStartDestination(
             if (Model.currentUserId() != null) R.id.postsFragment else R.id.loginFragment
@@ -34,14 +34,14 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNav.isVisible = !isAuthScreen
             
             if (!isAuthScreen) {
-                // Map child fragments to their main tabs
+                
                 val tabId = when (destination.id) {
                     R.id.postDetailsFragment, R.id.editPostFragment -> R.id.postsFragment
                     R.id.createPostFragment -> R.id.bookSearchFragment
                     else -> destination.id
                 }
                 
-                // Only trigger update if the menu contains this ID (avoids crashes on deep-link fragments)
+                
                 val menu = binding.bottomNav.menu
                 val item = menu.findItem(tabId)
                 if (item != null) {
