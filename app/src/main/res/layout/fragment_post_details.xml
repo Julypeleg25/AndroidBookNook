@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/bn_beige">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,6 +14,7 @@
             android:id="@+id/title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="@color/bn_brown_text"
             android:textStyle="bold"
             android:textSize="20sp"/>
 
@@ -20,6 +22,7 @@
             android:id="@+id/author"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="@color/bn_secondary_text"
             android:layout_marginTop="4dp"/>
 
         <ImageView
@@ -43,6 +46,7 @@
             android:id="@+id/review"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="@color/bn_brown_text"
             android:layout_marginTop="10dp"/>
 
         <LinearLayout
@@ -56,20 +60,34 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Like"/>
+                android:backgroundTint="@color/bn_pink"
+                android:text="Like"
+                android:textColor="@color/white"/>
 
             <Button
                 android:id="@+id/addWishlistBtn"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Wishlist"/>
+                android:backgroundTint="@color/bn_orange"
+                android:text="Wishlist"
+                android:textColor="@color/white"/>
+
+            <Button
+                android:id="@+id/addReadlistBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="@color/bn_orange_dark"
+                android:text="Readlist"
+                android:textColor="@color/white"/>
         </LinearLayout>
 
         <EditText
             android:id="@+id/commentInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/bn_orange"
             android:hint="Add a comment"
             android:layout_marginTop="14dp"/>
 
@@ -77,13 +95,16 @@
             android:id="@+id/addCommentBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/bn_pink"
             android:text="Post Comment"
+            android:textColor="@color/white"
             android:layout_marginTop="8dp"/>
 
         <TextView
             android:id="@+id/meta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="@color/bn_secondary_text"
             android:layout_marginTop="14dp"
             android:textSize="12sp"/>
     </LinearLayout>

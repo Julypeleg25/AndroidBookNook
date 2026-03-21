@@ -1,17 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bn_beige"
+    android:orientation="vertical"
     android:padding="12dp">
 
+    <TextView
+        android:id="@+id/wishlistTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Wishlist"
+        android:textColor="@color/bn_brown_text"
+        android:textStyle="bold"
+        android:textSize="18sp"/>
+
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler"
-        android:layout_width="0dp"
+        android:id="@+id/wishlistRecycler"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"/>
+
+    <TextView
+        android:id="@+id/readlistTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Readlist"
+        android:textColor="@color/bn_brown_text"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginTop="12dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/readlistRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"/>
+</LinearLayout>

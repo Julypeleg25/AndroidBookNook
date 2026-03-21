@@ -1,9 +1,11 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.BookNook" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BookNook" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/bn_orange</item>
+        <item name="colorPrimaryVariant">@color/bn_orange_dark</item>
+        <item name="colorSecondary">@color/bn_pink</item>
+        <item name="colorSecondaryVariant">@color/bn_pink_dark</item>
+        <item name="android:windowBackground">@color/bn_beige</item>
+        <item name="colorSurface">@color/bn_cream</item>
     </style>
-
-    <style name="Theme.BookNook" parent="Base.Theme.BookNook" />
 </resources>

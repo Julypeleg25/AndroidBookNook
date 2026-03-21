@@ -2,4 +2,19 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="bn_beige">#F6EBDD</color>
+    <color name="bn_beige_dark">#E8D7C1</color>
+    <color name="bn_cream">#FFF8F1</color>
+    <color name="bn_orange">#D8894B</color>
+    <color name="bn_orange_dark">#B86D35</color>
+    <color name="bn_pink">#D68A98</color>
+    <color name="bn_pink_dark">#B06A79</color>
+    <color name="bn_brown_text">#4B3A32</color>
+    <color name="bn_secondary_text">#78665E</color>
+
+    <color name="purple_500">#D8894B</color>
+    <color name="purple_700">#B86D35</color>
+    <color name="teal_200">#D68A98</color>
+    <color name="teal_700">#B06A79</color>
 </resources>
