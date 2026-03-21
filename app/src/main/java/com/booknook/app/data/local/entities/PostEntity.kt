@@ -9,17 +9,17 @@ import androidx.room.PrimaryKey
     indices = [Index("bookTitle"), Index("bookAuthor"), Index("rating"), Index("commentsCount")]
 )
 data class PostEntity(
-    @PrimaryKey val id: String,
-    val userId: String,
-    val username: String,
-    val bookId: String,
-    val bookTitle: String,
-    val bookAuthor: String,
-    val bookThumbnail: String?,
-    val rating: Int,
-    val review: String,
-    val imageUrl: String?,
-    val createdAt: Long,
-    val likesCount: Int,
-    val commentsCount: Int
+    @PrimaryKey val id: String = "",
+    val userId: String = "",
+    val username: String = "",
+    val bookId: String = "",
+    val bookTitle: String = "",
+    val bookAuthor: String = "",
+    val bookThumbnail: String? = null,
+    val rating: Int = 0,
+    val review: String = "",
+    val imageUrl: String? = null,
+    val createdAt: Long = 0,
+    val likesCount: Int = 0,
+    val commentsCount: Int = 0
 )

@@ -1,35 +1,39 @@
 package com.booknook.app.ui.wishlist
 
-import androidx.lifecycle.lifecycleScope
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentWishlistBinding
-import com.booknook.app.model.Model
-import kotlinx.coroutines.launch
+import com.google.android.material.snackbar.Snackbar
 
 class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
-    private lateinit var binding: FragmentWishlistBinding
+    private var _binding: FragmentWishlistBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: WishlistViewModel by viewModels()
     private lateinit var wishlistAdapter: WishlistAdapter
     private lateinit var readlistAdapter: ReadlistAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentWishlistBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentWishlistBinding.bind(view)
 
-        val uid = Model.currentUserId() ?: return
+        setupAdapters()
+        observeViewModel()
+    }
 
+    private fun setupAdapters() {
         wishlistAdapter = WishlistAdapter { item ->
-            viewLifecycleOwner.lifecycleScope.launch { Model.removeFromWishlist(uid, item.bookId) }
-            Toast.makeText(requireContext(), "Removed from wishlist", Toast.LENGTH_SHORT).show()
+            viewModel.removeFromWishlist(item.bookId)
+            Snackbar.make(binding.root, "Removed from wishlist", Snackbar.LENGTH_SHORT).show()
         }
 
         readlistAdapter = ReadlistAdapter { item ->
-            viewLifecycleOwner.lifecycleScope.launch { Model.removeFromReadlist(uid, item.bookId) }
-            Toast.makeText(requireContext(), "Removed from readlist", Toast.LENGTH_SHORT).show()
+            viewModel.removeFromReadlist(item.bookId)
+            Snackbar.make(binding.root, "Removed from readlist", Snackbar.LENGTH_SHORT).show()
         }
 
         binding.wishlistRecycler.layoutManager = LinearLayoutManager(requireContext())
@@ -37,13 +41,26 @@ class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
         binding.readlistRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.readlistRecycler.adapter = readlistAdapter
+    }
 
-        Model.observeWishlist(uid).observe(viewLifecycleOwner) { list ->
-            wishlistAdapter.submit(list)
+    private fun observeViewModel() {
+        viewModel.observeWishlist().observe(viewLifecycleOwner) { list ->
+            wishlistAdapter.submitList(list)
         }
 
-        Model.observeReadlist(uid).observe(viewLifecycleOwner) { list ->
-            readlistAdapter.submit(list)
+        viewModel.observeReadlist().observe(viewLifecycleOwner) { list ->
+            readlistAdapter.submitList(list)
         }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

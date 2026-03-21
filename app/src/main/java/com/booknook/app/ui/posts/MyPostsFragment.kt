@@ -2,39 +2,73 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
-import com.booknook.app.databinding.FragmentPostsBinding
+import com.booknook.app.databinding.FragmentMyPostsBinding
 import com.booknook.app.model.Model
-import kotlinx.coroutines.launch
+import com.google.android.material.snackbar.Snackbar
 
-class MyPostsFragment : Fragment(R.layout.fragment_posts) {
+class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
-    private lateinit var binding: FragmentPostsBinding
-    private val adapter = PostsAdapter { postId ->
-        val action = MyPostsFragmentDirections.actionMyPostsToDetails(postId)
-        findNavController().navigate(action)
-    }
+    private var _binding: FragmentMyPostsBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: MyPostsViewModel by viewModels()
+
+    private val adapter = PostsAdapter(
+        onClick = { postId ->
+            val action = MyPostsFragmentDirections.actionMyPostsToDetails(postId)
+            findNavController().navigate(action)
+        },
+        onEdit = { postId ->
+            val action = MyPostsFragmentDirections.actionMyPostsToEdit(postId)
+            findNavController().navigate(action)
+        },
+        onDelete = { postId ->
+            viewModel.deletePost(postId)
+            Snackbar.make(binding.root, "Post deleted", Snackbar.LENGTH_LONG).show()
+        }
+    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentPostsBinding.bind(view)
-        binding.topActions.visibility = View.GONE
+        super.onViewCreated(view, savedInstanceState)
+        
+        if (Model.currentUserId() == null) {
+            findNavController().navigate(R.id.loginFragment)
+            return
+        }
+
+        _binding = FragmentMyPostsBinding.bind(view)
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
 
-        val uid = Model.currentUserId() ?: return
+        observeViewModel()
+        viewModel.refreshPosts()
+    }
 
-        Model.observeMyPosts(uid).observe(viewLifecycleOwner) { list ->
-            adapter.submit(list)
-            binding.emptyText.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+    private fun observeViewModel() {
+        viewModel.observeMyPosts().observe(viewLifecycleOwner) { list ->
+            adapter.submitList(list)
+            binding.tvEmpty.isVisible = list.isEmpty()
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            try { Model.refreshPosts() } catch (_: Exception) {}
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            binding.pbLoading.isVisible = isLoading
         }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

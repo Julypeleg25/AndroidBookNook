@@ -2,27 +2,56 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostDetailsBinding
-import com.booknook.app.domain.Book
 import com.booknook.app.model.Model
+import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
-import kotlinx.coroutines.launch
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
 
-    private lateinit var binding: FragmentPostDetailsBinding
+    private var _binding: FragmentPostDetailsBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: PostDetailsViewModel by viewModels()
     private lateinit var postId: String
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentPostDetailsBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentPostDetailsBinding.bind(view)
         postId = PostDetailsFragmentArgs.fromBundle(requireArguments()).postId
 
-        Model.observePost(postId).observe(viewLifecycleOwner) { post ->
+        observeViewModel()
+
+        binding.likeBtn.setOnClickListener {
+            viewModel.toggleLike(postId)
+        }
+
+        binding.addCommentBtn.setOnClickListener {
+            val text = binding.commentInput.text.toString().trim()
+            if (text.isEmpty()) return@setOnClickListener
+            viewModel.addComment(postId, text)
+            binding.commentInput.setText("")
+        }
+
+        binding.addWishlistBtn.setOnClickListener {
+            viewModel.addToWishlist(postId)
+        }
+
+        binding.addReadlistBtn.setOnClickListener {
+            viewModel.addToReadlist(postId)
+        }
+
+        binding.title.setOnLongClickListener {
+            val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
+            findNavController().navigate(action)
+            true
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
             if (post == null) return@observe
 
             binding.title.text = post.bookTitle
@@ -31,52 +60,31 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             binding.review.text = post.review
             binding.meta.text = "${post.likesCount} likes • ${post.commentsCount} comments"
 
-            if (!post.imageUrl.isNullOrBlank()) {
-                Picasso.get().load(post.imageUrl).fit().centerCrop().into(binding.postImage)
+            Picasso.get()
+                .load(post.imageUrl ?: post.bookThumbnail)
+                .placeholder(R.drawable.book_placeholder)
+                .error(R.drawable.book_placeholder)
+                .fit()
+                .centerCrop()
+                .into(binding.postImage)
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
 
-        binding.likeBtn.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    Model.toggleLike(postId)
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Like failed", Toast.LENGTH_SHORT).show()
-                }
+        viewModel.actionFeedback.observe(viewLifecycleOwner) { feedback ->
+            feedback?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                viewModel.resetFeedback()
             }
         }
+    }
 
-        binding.addCommentBtn.setOnClickListener {
-            val text = binding.commentInput.text.toString().trim()
-            if (text.isEmpty()) return@setOnClickListener
-            binding.commentInput.setText("")
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    Model.addComment(postId, text)
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Comment failed", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        binding.addWishlistBtn.setOnClickListener {
-            val uid = Model.currentUserId() ?: return@setOnClickListener
-            val post = Model.observePost(postId).value ?: return@setOnClickListener
-            viewLifecycleOwner.lifecycleScope.launch { Model.addToWishlist(uid, Book(post.bookId, post.bookTitle, post.bookAuthor, post.bookThumbnail)) }
-            Toast.makeText(requireContext(), "Added to wishlist", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.addReadlistBtn.setOnClickListener {
-            val uid = Model.currentUserId() ?: return@setOnClickListener
-            val post = Model.observePost(postId).value ?: return@setOnClickListener
-            viewLifecycleOwner.lifecycleScope.launch { Model.addToReadlist(uid, Book(post.bookId, post.bookTitle, post.bookAuthor, post.bookThumbnail)) }
-            Toast.makeText(requireContext(), "Added to readlist", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.title.setOnLongClickListener {
-            val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
-            findNavController().navigate(action)
-            true
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

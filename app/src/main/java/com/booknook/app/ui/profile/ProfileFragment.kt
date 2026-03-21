@@ -4,70 +4,95 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentProfileBinding
 import com.booknook.app.model.Model
-import com.booknook.app.ui.auth.LoginActivity
-import kotlinx.coroutines.launch
+import com.google.android.material.snackbar.Snackbar
+import com.squareup.picasso.Picasso
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
-    private lateinit var binding: FragmentProfileBinding
-    private var pickedAvatar: Uri? = null
+    private var _binding: FragmentProfileBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: ProfileViewModel by viewModels()
+    private var selectedAvatarUri: Uri? = null
 
-    private val pickAvatar = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        pickedAvatar = uri
-        if (uri != null) Toast.makeText(requireContext(), "Avatar selected", Toast.LENGTH_SHORT).show()
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            selectedAvatarUri = it
+            Picasso.get().load(it).fit().centerCrop().into(binding.avatarImage)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentProfileBinding.bind(view)
-
-        Model.observeLocalUser().observe(viewLifecycleOwner) { user ->
-            if (user != null) {
-                binding.usernameInput.setText(user.username)
-                binding.emailInput.setText(user.email)
-            }
+        super.onViewCreated(view, savedInstanceState)
+        
+        if (Model.currentUserId() == null) {
+            findNavController().navigate(R.id.loginFragment)
+            return
         }
 
-        binding.pickAvatarBtn.setOnClickListener { pickAvatar.launch("image/*") }
+        _binding = FragmentProfileBinding.bind(view)
+
+        observeViewModel()
+
+        binding.pickAvatarBtn.setOnClickListener {
+            pickImageLauncher.launch("image/*")
+        }
 
         binding.saveBtn.setOnClickListener {
             val username = binding.usernameInput.text.toString().trim()
             val email = binding.emailInput.text.toString().trim()
-            if (username.isEmpty() || email.isEmpty()) {
-                Toast.makeText(requireContext(), "Username and email required", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            setLoading(true)
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    Model.updateProfile(username, email, pickedAvatar)
-                    Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Save failed", Toast.LENGTH_SHORT).show()
-                } finally {
-                    setLoading(false)
-                }
+            if (username.isNotEmpty() && email.isNotEmpty()) {
+                viewModel.updateProfile(username, email, selectedAvatarUri)
+            } else {
+                Snackbar.make(binding.root, "All fields are required", Snackbar.LENGTH_SHORT).show()
             }
         }
 
         binding.logoutBtn.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                Model.logoutAsync()
-                startActivity(Intent(requireContext(), LoginActivity::class.java))
-                requireActivity().finish()
+            viewModel.logout()
+            findNavController().navigate(R.id.loginFragment)
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.user.observe(viewLifecycleOwner) { user ->
+            user?.let {
+                binding.usernameInput.setText(it.username)
+                binding.emailInput.setText(it.email)
+                if (selectedAvatarUri == null && !it.avatarUrl.isNullOrBlank()) {
+                    Picasso.get().load(it.avatarUrl).fit().centerCrop().into(binding.avatarImage)
+                }
+            }
+        }
+
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loading.isVisible = isLoading
+            binding.saveBtn.isEnabled = !isLoading
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+            }
+        }
+
+        viewModel.updateSuccess.observe(viewLifecycleOwner) { success ->
+            if (success) {
+                Snackbar.make(binding.root, "Profile updated", Snackbar.LENGTH_SHORT).show()
+                viewModel.resetUpdateSuccess()
             }
         }
     }
 
-    private fun setLoading(isLoading: Boolean) {
-        binding.loading.visibility = if (isLoading) View.VISIBLE else View.GONE
-        binding.saveBtn.isEnabled = !isLoading
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -3,42 +3,42 @@ package com.booknook.app.ui.posts
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.booknook.app.model.Model
-import kotlinx.coroutines.launch
+import com.google.android.material.snackbar.Snackbar
+import com.squareup.picasso.Picasso
 
 class EditPostFragment : Fragment(R.layout.fragment_create_post) {
 
-    private lateinit var binding: FragmentCreatePostBinding
+    private var _binding: FragmentCreatePostBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: CreatePostViewModel by viewModels()
     private var pickedImage: Uri? = null
     private lateinit var postId: String
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        pickedImage = uri
-        if (uri != null) Toast.makeText(requireContext(), "Image selected", Toast.LENGTH_SHORT).show()
+        uri?.let {
+            pickedImage = it
+            binding.imagePreview.isVisible = true
+            Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding = FragmentCreatePostBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentCreatePostBinding.bind(view)
         postId = EditPostFragmentArgs.fromBundle(requireArguments()).postId
 
-        // Reuse the create layout, but change button labels
         binding.publishBtn.text = "Save"
         binding.pickImageBtn.text = "Replace Image"
 
-        Model.observePost(postId).observe(viewLifecycleOwner) { post ->
-            if (post == null) return@observe
-            binding.bookTitle.text = post.bookTitle
-            binding.bookAuthor.text = post.bookAuthor
-            binding.ratingBar.rating = post.rating.toFloat()
-            binding.reviewInput.setText(post.review)
-        }
+        observeViewModel()
 
         binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
 
@@ -46,27 +46,50 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
             if (rating <= 0 || review.isEmpty()) {
-                Toast.makeText(requireContext(), "Rating and review required", Toast.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "Rating and review required", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            setLoading(true)
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    Model.updatePost(postId, rating, review, pickedImage)
-                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
-                    findNavController().popBackStack()
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), e.message ?: "Update failed", Toast.LENGTH_SHORT).show()
-                } finally {
-                    setLoading(false)
-                }
+            viewModel.updatePost(postId, rating, review, pickedImage)
+        }
+    }
+
+    private fun observeViewModel() {
+        Model.observePost(postId).observe(viewLifecycleOwner) { post ->
+            if (post == null) return@observe
+            binding.bookTitle.text = post.bookTitle
+            binding.bookAuthor.text = post.bookAuthor
+            binding.ratingBar.rating = post.rating.toFloat()
+            binding.reviewInput.setText(post.review)
+            
+            if (pickedImage == null && !post.imageUrl.isNullOrBlank()) {
+                binding.imagePreview.isVisible = true
+                Picasso.get().load(post.imageUrl).fit().centerCrop().into(binding.imagePreview)
+            }
+        }
+
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loading.isVisible = isLoading
+            binding.publishBtn.isEnabled = !isLoading
+        }
+
+        viewModel.saveSuccess.observe(viewLifecycleOwner) { success ->
+            if (success) {
+                Snackbar.make(binding.root, "Updated successfully", Snackbar.LENGTH_SHORT).show()
+                viewModel.resetSaveSuccess()
+                findNavController().popBackStack()
+            }
+        }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun setLoading(isLoading: Boolean) {
-        binding.loading.visibility = if (isLoading) View.VISIBLE else View.GONE
-        binding.publishBtn.isEnabled = !isLoading
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

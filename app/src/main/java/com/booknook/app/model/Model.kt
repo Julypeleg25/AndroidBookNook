@@ -21,6 +21,9 @@ object Model {
     lateinit var local: AppLocalRepository
         private set
 
+    private var lastRefreshTime = 0L
+    private val REFRESH_INTERVAL = 300_000L
+
     val firebase = FirebaseModel()
     val api = ApiModel()
 
@@ -66,15 +69,20 @@ object Model {
     fun observePosts(): LiveData<List<PostEntity>> = local.observePosts()
     fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = local.observeMyPosts(userId)
     fun observePost(postId: String): LiveData<PostEntity?> = local.observePost(postId)
+    suspend fun getPost(postId: String): PostEntity? = local.getPost(postId)
 
     fun searchPosts(title: String?, author: String?, minRating: Int?, minComments: Int?) =
         local.searchPosts(title, author, minRating, minComments)
 
     suspend fun refreshPosts() {
+        val now = System.currentTimeMillis()
+        if (now - lastRefreshTime < REFRESH_INTERVAL) return
+
         val posts = firebase.fetchAllPosts()
         withContext(Dispatchers.IO) {
             local.upsertPosts(posts)
         }
+        lastRefreshTime = now
     }
 
     suspend fun createPost(book: Book, rating: Int, review: String, imageUri: Uri?) {

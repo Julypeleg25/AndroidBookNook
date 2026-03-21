@@ -7,31 +7,12 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <TextView
-        android:id="@+id/wishlistTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Wishlist"
-        android:textColor="@color/bn_brown_text"
-        android:textStyle="bold"
-        android:textSize="18sp"/>
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/wishlistRecycler"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:layout_marginTop="8dp"/>
-
-    <TextView
-        android:id="@+id/readlistTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Readlist"
-        android:textColor="@color/bn_brown_text"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:layout_marginTop="12dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/readlistRecycler"

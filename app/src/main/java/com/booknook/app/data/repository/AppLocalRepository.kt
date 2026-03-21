@@ -14,6 +14,7 @@ class AppLocalRepository(
     fun observePosts(): LiveData<List<PostEntity>> = postDao.getAll()
     fun observeMyPosts(userId: String): LiveData<List<PostEntity>> = postDao.getByUser(userId)
     fun observePost(postId: String): LiveData<PostEntity?> = postDao.getById(postId)
+    suspend fun getPost(postId: String): PostEntity? = postDao.getByIdSync(postId)
     fun searchPosts(title: String?, author: String?, minRating: Int?, minComments: Int?) =
         postDao.search(title, author, minRating, minComments)
 
