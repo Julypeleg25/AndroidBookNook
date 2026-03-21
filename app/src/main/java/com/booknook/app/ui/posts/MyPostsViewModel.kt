@@ -4,8 +4,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.booknook.app.R
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.model.Model
+import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.launch
 
 class MyPostsViewModel : ViewModel() {
@@ -13,21 +15,21 @@ class MyPostsViewModel : ViewModel() {
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> = _loading
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    private val _error = MutableLiveData<Int?>()
+    val error: LiveData<Int?> = _error
 
     fun observeMyPosts(): LiveData<List<PostEntity>> {
-        val userId = Model.currentUserId() ?: return MutableLiveData(emptyList())
-        return Model.observeMyPosts(userId)
+        val userId = Model.authRepository.currentUserId() ?: return MutableLiveData(emptyList())
+        return Model.postsRepository.observeMyPosts(userId, userId)
     }
 
     fun refreshPosts() {
         _loading.value = true
         viewModelScope.launch {
             try {
-                Model.refreshPosts(force = true)
+                Model.postsRepository.refreshPosts(force = true)
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e, "Failed to refresh posts")
+                _error.value = e.toUserFriendlyMessageRes(R.string.error_posts_refresh)
             } finally {
                 _loading.value = false
             }
@@ -37,9 +39,9 @@ class MyPostsViewModel : ViewModel() {
     fun deletePost(postId: String) {
         viewModelScope.launch {
             try {
-                Model.deletePost(postId)
+                Model.postsRepository.deletePost(postId)
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e, "Failed to delete post")
+                _error.value = e.toUserFriendlyMessageRes(R.string.error_post_delete)
             }
         }
     }
@@ -53,24 +55,13 @@ class MyPostsViewModel : ViewModel() {
         
         viewModelScope.launch {
             try {
-                Model.toggleLike(postId)
+                Model.postsRepository.toggleLike(postId)
             } catch (e: Exception) {
                 com.booknook.app.util.Logger.e("MyPostsVM", "Like toggle failed for $postId", e)
-                _error.value = "Failed to update like"
+                _error.value = e.toUserFriendlyMessageRes(R.string.error_like_update)
             } finally {
                 _isLikeProcessing.value = false
             }
-        }
-    }
-
-
-    private fun mapErrorMessage(e: Exception, default: String): String {
-        val msg = e.message ?: return default
-        return when {
-            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) -> 
-                "Device is offline. Please check your connection."
-            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
-            else -> msg
         }
     }
 }

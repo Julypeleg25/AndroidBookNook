@@ -1,5 +1,6 @@
 package com.booknook.app.util
 
+import com.booknook.app.R
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -7,53 +8,69 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import java.io.IOException
 import java.net.UnknownHostException
 
-fun Throwable?.toUserFriendlyMessage(): String {
+fun Throwable?.toUserFriendlyMessageRes(defaultResId: Int = R.string.error_generic): Int {
     return when (this) {
-        is UnknownHostException, is FirebaseNetworkException, is IOException -> 
-            "It looks like you're offline. Please check your internet connection."
-        
-        is FirebaseAuthInvalidUserException -> 
-            "We couldn't find an account with this email."
-            
-        is FirebaseAuthInvalidCredentialsException -> 
-            "The password you entered is incorrect. Please try again."
-            
-        is FirebaseAuthUserCollisionException -> 
-            "An account already exists with this email address."
-            
-        else -> this?.message?.toUserFriendlyMessage() ?: "Something went wrong on our end. Please try again in a moment."
+        is UnknownHostException, is FirebaseNetworkException, is IOException ->
+            R.string.error_offline
+
+        is FirebaseAuthInvalidUserException ->
+            R.string.error_auth_user_not_found
+
+        is FirebaseAuthInvalidCredentialsException ->
+            R.string.error_auth_wrong_password
+
+        is FirebaseAuthUserCollisionException ->
+            R.string.error_auth_email_exists
+
+        else -> this?.message?.toUserFriendlyMessageRes(defaultResId)
+            ?: R.string.error_generic_retry
     }
 }
 
-fun String?.toUserFriendlyMessage(): String {
-    if (this == null) return "Something went wrong. Please try again."
-    
+fun String?.toUserFriendlyMessageRes(defaultResId: Int = R.string.error_generic): Int {
+    if (this == null) return defaultResId
+
     val lower = this.lowercase()
     return when {
         lower.contains("network") || lower.contains("timeout") || lower.contains("connection") ->
-            "Having trouble connecting. Please check your internet and try again."
-            
-        lower.contains("password") && (lower.contains("wrong") || lower.contains("invalid")) ->
-            "Oops! That password doesn't look right."
-            
-        lower.contains("user not found") || lower.contains("no user") ->
-            "We couldn't find that account. Want to sign up instead?"
-            
-        lower.contains("already in use") || lower.contains("collision") ->
-            "This email is already part of the BookNook family! Try logging in."
-            
-        lower.contains("empty") || lower.contains("required") ->
-            "Please fill in all the details so we can continue."
-            
-        lower.contains("permission") || lower.contains("denied") ->
-            "You don't have permission to do that."
-            
-        lower.contains("rating") && lower.contains("required") ->
-            "Please give the book a rating and a quick review!"
-            
-        lower.contains("photo") && lower.contains("required") ->
-            "A picture is worth a thousand words! Please add a photo."
+            R.string.error_connection
 
-        else -> "Something went wrong. We're looking into it!"
+        lower.contains("password") && (lower.contains("wrong") || lower.contains("invalid")) ->
+            R.string.error_auth_wrong_password
+
+        lower.contains("invalid_login_credentials") ->
+            R.string.error_auth_invalid_credentials
+
+        lower.contains("user not found") || lower.contains("no user") ->
+            R.string.error_auth_user_not_found
+
+        lower.contains("already in use") || lower.contains("collision") ->
+            R.string.error_auth_email_exists
+
+        lower.contains("badly formatted") ->
+            R.string.error_auth_invalid_email
+
+        lower.contains("at least 6 characters") ->
+            R.string.error_auth_password_short
+
+        lower.contains("empty") || lower.contains("required") ->
+            R.string.error_fill_all_details
+
+        lower.contains("permission") || lower.contains("denied") ->
+            R.string.error_permission
+
+        lower.contains("api has not been used") || lower.contains("firestore api") ->
+            R.string.error_firestore_api
+
+        lower.contains("rating") && lower.contains("required") ->
+            R.string.error_rating_required
+
+        lower.contains("photo") && lower.contains("required") ->
+            R.string.error_photo_required
+
+        lower.contains("comment") && lower.contains("empty") ->
+            R.string.error_comment_required
+
+        else -> defaultResId
     }
 }

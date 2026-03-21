@@ -4,9 +4,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.booknook.app.R
 import com.booknook.app.domain.Book
 import com.booknook.app.model.Model
-import com.booknook.app.model.api.ApiModel
+import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -19,8 +20,8 @@ class BookSearchViewModel : ViewModel() {
     private val _loadingMore = MutableLiveData(false)
     val loadingMore: LiveData<Boolean> = _loadingMore
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    private val _error = MutableLiveData<Int?>()
+    val error: LiveData<Int?> = _error
 
     private val _searchResults = MutableLiveData<List<Book>>(emptyList())
     val searchResults: LiveData<List<Book>> = _searchResults
@@ -53,7 +54,7 @@ class BookSearchViewModel : ViewModel() {
                 _loading.value = true
                 _error.value = null
                 _isEmpty.value = false
-                val results = Model.searchBooks(currentQuery, startIndex)
+                val results = Model.booksRepository.searchBooks(currentQuery, startIndex)
                 _searchResults.value = results
                 _isEmpty.value = results.isEmpty()
                 startIndex = results.size
@@ -61,7 +62,7 @@ class BookSearchViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e)
+                _error.value = e.toUserFriendlyMessageRes(R.string.search_failed)
             } finally {
                 _loading.value = false
             }
@@ -74,7 +75,7 @@ class BookSearchViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 _loadingMore.value = true
-                val results = Model.searchBooks(currentQuery, startIndex)
+                val results = Model.booksRepository.searchBooks(currentQuery, startIndex)
                 if (results.isNotEmpty()) {
                     val currentList = _searchResults.value ?: emptyList()
                     val newList = currentList + results
@@ -85,7 +86,8 @@ class BookSearchViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                
+                com.booknook.app.util.Logger.e("BookSearch", "Failed to load more books", e)
+                _error.value = e.toUserFriendlyMessageRes(R.string.search_failed)
             } finally {
                 _loadingMore.value = false
             }
@@ -102,15 +104,5 @@ class BookSearchViewModel : ViewModel() {
         _error.value = null
         _searchResults.value = emptyList()
         _isEmpty.value = false
-    }
-
-    private fun mapErrorMessage(e: Exception): String {
-        val msg = e.message ?: return "Search failed"
-        return when {
-            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) ->
-                "Device is offline. Please check your connection."
-            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
-            else -> msg
-        }
     }
 }

@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
         
         val navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
         navGraph.setStartDestination(
-            if (Model.currentUserId() != null) R.id.postsFragment else R.id.loginFragment
+            if (Model.authRepository.currentUserId() != null) R.id.postsFragment else R.id.loginFragment
         )
         navController.graph = navGraph
 

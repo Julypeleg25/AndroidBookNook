@@ -5,8 +5,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.booknook.app.R
 import com.booknook.app.data.local.entities.UserEntity
 import com.booknook.app.model.Model
+import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.launch
 
 class ProfileViewModel : ViewModel() {
@@ -14,13 +16,13 @@ class ProfileViewModel : ViewModel() {
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> = _loading
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    private val _error = MutableLiveData<Int?>()
+    val error: LiveData<Int?> = _error
 
     private val _updateSuccess = MutableLiveData<Boolean>()
     val updateSuccess: LiveData<Boolean> = _updateSuccess
 
-    val user: LiveData<UserEntity?> = Model.observeLocalUser()
+    val user: LiveData<UserEntity?> = Model.profileRepository.observeLocalUser()
 
     val inputUsername = MutableLiveData<String>()
     val inputAvatarUri = MutableLiveData<Uri?>()
@@ -34,8 +36,10 @@ class ProfileViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             try {
-                Model.ensureLocalProfile()
-            } catch (_: Exception) { }
+                Model.profileRepository.ensureLocalProfile()
+            } catch (e: Exception) {
+                com.booknook.app.util.Logger.e("ProfileVM", "Failed to refresh local profile", e)
+            }
         }
     }
 
@@ -51,11 +55,11 @@ class ProfileViewModel : ViewModel() {
         _error.value = null
         viewModelScope.launch {
             try {
-                Model.updateProfile(username, email, avatarUri)
+                Model.profileRepository.updateProfile(username, email, avatarUri)
                 _updateSuccess.value = true
                 inputAvatarUri.value = null 
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e)
+                _error.value = e.toUserFriendlyMessageRes(R.string.profile_update_failed)
             } finally {
                 _loading.value = false
             }
@@ -64,21 +68,11 @@ class ProfileViewModel : ViewModel() {
 
     fun logout() {
         viewModelScope.launch {
-            Model.logoutAsync()
+            Model.authRepository.logout()
         }
     }
 
     fun resetUpdateSuccess() {
         _updateSuccess.value = false
-    }
-
-    private fun mapErrorMessage(e: Exception): String {
-        val msg = e.message ?: return "Update failed"
-        return when {
-            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) -> 
-                "Device is offline. Changes will sync when online."
-            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
-            else -> msg
-        }
     }
 }

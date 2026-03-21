@@ -5,9 +5,11 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.booknook.app.R
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.data.local.entities.UserEntity
 import com.booknook.app.model.Model
+import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.launch
 
 class PostsViewModel : ViewModel() {
@@ -15,12 +17,13 @@ class PostsViewModel : ViewModel() {
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> = _loading
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    private val _error = MutableLiveData<Int?>()
+    val error: LiveData<Int?> = _error
 
-    val user: LiveData<UserEntity?> = Model.observeLocalUser()
+    val user: LiveData<UserEntity?> = Model.profileRepository.observeLocalUser()
 
-    private val allPosts: LiveData<List<PostEntity>> = Model.observePosts()
+    private val allPosts: LiveData<List<PostEntity>> =
+        Model.postsRepository.observePosts(Model.authRepository.currentUserId().orEmpty())
     private var currentSearchSource: LiveData<List<PostEntity>>? = null
 
     private val _posts = MediatorLiveData<List<PostEntity>>()
@@ -36,9 +39,9 @@ class PostsViewModel : ViewModel() {
         _error.value = null
         viewModelScope.launch {
             try {
-                Model.refreshPosts(force = true)
+                Model.postsRepository.refreshPosts(force = true)
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e)
+                _error.value = e.toUserFriendlyMessageRes(R.string.error_posts_refresh)
             } finally {
                 _loading.value = false
             }
@@ -55,7 +58,7 @@ class PostsViewModel : ViewModel() {
             return
         }
 
-        val source = Model.searchPostsByQuery(query)
+        val source = Model.postsRepository.searchPostsByQuery(query, Model.authRepository.currentUserId().orEmpty())
         currentSearchSource = source
         _posts.removeSource(allPosts)
         _posts.addSource(source) { _posts.value = it }
@@ -70,10 +73,10 @@ class PostsViewModel : ViewModel() {
         
         viewModelScope.launch {
             try {
-                Model.toggleLike(postId)
+                Model.postsRepository.toggleLike(postId)
             } catch (e: Exception) {
                 com.booknook.app.util.Logger.e("PostsVM", "Like toggle failed for $postId", e)
-                _error.value = "Failed to update like"
+                _error.value = e.toUserFriendlyMessageRes(R.string.error_like_update)
             } finally {
                 _isLikeProcessing.value = false
             }
@@ -83,20 +86,10 @@ class PostsViewModel : ViewModel() {
     fun deletePost(postId: String) {
         viewModelScope.launch {
             try {
-                Model.deletePost(postId)
+                Model.postsRepository.deletePost(postId)
             } catch (e: Exception) {
-                _error.value = "Failed to delete post: ${e.message}"
+                _error.value = e.toUserFriendlyMessageRes(R.string.error_post_delete)
             }
-        }
-    }
-
-    private fun mapErrorMessage(e: Exception): String {
-        val msg = e.message ?: return "Failed to refresh posts"
-        return when {
-            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) ->
-                "Device is offline. Showing cached posts."
-            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
-            else -> msg
         }
     }
 }
