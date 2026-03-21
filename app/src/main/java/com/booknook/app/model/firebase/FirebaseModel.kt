@@ -42,7 +42,9 @@ class FirebaseModel {
         if (avatarUri != null) {
             try {
                 avatarUrl = uploadAvatar(uid, avatarUri)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                com.booknook.app.util.Logger.e("Auth", "Avatar upload failed during registration", e)
+            }
         }
 
         try {
@@ -152,7 +154,7 @@ class FirebaseModel {
             try {
                 storage.reference.child("posts/$uid/$postId.jpg").delete().await()
             } catch (e: Exception) {
-                com.booknook.app.util.Logger.d("Firebase", "Storage file already gone or missing")
+                com.booknook.app.util.Logger.e("Firebase", "Failed to delete storage image for post $postId", e)
             }
         }
     }
@@ -184,6 +186,7 @@ class FirebaseModel {
                 .mapNotNull { it.reference.parent.parent?.id }
                 .toSet()
         } catch (e: Exception) {
+            com.booknook.app.util.Logger.e("Firestore", "Failed to resolve liked post ids for $uid", e)
             emptySet()
         }
 
