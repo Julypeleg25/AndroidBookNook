@@ -43,14 +43,12 @@ class AppLocalRepository(
 
     suspend fun cacheBooks(items: List<CachedBookEntity>) = cachedBookDao.upsertAll(items)
 
-    // Likes
     suspend fun isLikedSync(userId: String, postId: String) = likeDao.exists(userId, postId)
     suspend fun upsertLike(item: LikeEntity) = likeDao.insert(item)
     suspend fun deleteLike(userId: String, postId: String) = likeDao.delete(userId, postId)
     suspend fun clearUserLikes(userId: String) = likeDao.clearUserLikes(userId)
     suspend fun upsertLikes(items: List<LikeEntity>) = likeDao.insertAll(items)
 
-    // Comments
     fun observeComments(postId: String) = commentDao.observeByPost(postId)
     suspend fun upsertComment(item: CommentEntity) = commentDao.insert(item)
     suspend fun upsertComments(items: List<CommentEntity>) = commentDao.insertAll(items)

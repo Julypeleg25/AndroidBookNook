@@ -11,5 +11,9 @@ data class ReadlistEntity(
     val title: String,
     val author: String,
     val thumbnail: String?,
-    val addedAt: Long
+    val addedAt: Long,
+    val genre: String? = null,
+    val publishedDate: String? = null,
+    val pageCount: Int? = null,
+    val description: String? = null
 )

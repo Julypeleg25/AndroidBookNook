@@ -8,17 +8,17 @@ import com.booknook.app.data.local.dao.*
 import com.booknook.app.data.local.entities.*
 
 @Database(
-    entities = [PostEntity::class, WishlistEntity::class, ReadlistEntity::class, UserEntity::class, CachedBookEntity::class, LikeEntity::class, CommentEntity::class],
-    version = 4
+    entities = [PostEntity::class, CommentEntity::class, WishlistEntity::class, ReadlistEntity::class, UserEntity::class, CachedBookEntity::class, LikeEntity::class],
+    version = 9
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
+    abstract fun commentDao(): CommentDao
     abstract fun wishlistDao(): WishlistDao
     abstract fun readlistDao(): ReadlistDao
     abstract fun userDao(): UserDao
     abstract fun cachedBookDao(): CachedBookDao
     abstract fun likeDao(): LikeDao
-    abstract fun commentDao(): CommentDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null

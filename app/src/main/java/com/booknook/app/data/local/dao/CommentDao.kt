@@ -1,15 +1,12 @@
 package com.booknook.app.data.local.dao
 
 import androidx.lifecycle.LiveData
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.booknook.app.data.local.entities.CommentEntity
 
 @Dao
 interface CommentDao {
-    @Query("SELECT * FROM comments WHERE postId = :postId ORDER BY createdAt ASC")
+    @Query("SELECT * FROM comments WHERE postId = :postId ORDER BY createdAt DESC")
     fun observeByPost(postId: String): LiveData<List<CommentEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

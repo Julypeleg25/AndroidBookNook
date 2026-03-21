@@ -4,7 +4,7 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/loginFragment">
 
-    <!-- Global action for logout with backstack clearing -->
+    
     <action
         android:id="@+id/action_global_logout"
         app:destination="@id/loginFragment"
@@ -63,6 +63,10 @@
         <argument android:name="bookTitle" app:argType="string" />
         <argument android:name="bookAuthor" app:argType="string" />
         <argument android:name="bookThumbnail" app:argType="string" app:nullable="true" />
+        <argument android:name="bookPublishedDate" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+        <argument android:name="bookGenre" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+        <argument android:name="bookPageCount" app:argType="integer" android:defaultValue="-1" />
+        <argument android:name="bookDescription" app:argType="string" app:nullable="true" android:defaultValue="@null" />
     </fragment>
 
     <fragment

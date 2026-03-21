@@ -2,13 +2,17 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.LiveData
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostDetailsBinding
 import com.booknook.app.model.Model
+import com.booknook.app.util.formatRelativeTime
 import com.google.android.material.snackbar.Snackbar
+import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
@@ -18,6 +22,9 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
     private val viewModel: PostDetailsViewModel by viewModels()
     private val commentsAdapter = CommentsAdapter()
     private lateinit var postId: String
+    private var observedBookId: String? = null
+    private var wishlistState: LiveData<Boolean>? = null
+    private var readlistState: LiveData<Boolean>? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -36,9 +43,10 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
 
         binding.addCommentBtn.setOnClickListener {
             val text = binding.commentInput.text.toString().trim()
-            if (text.isEmpty()) return@setOnClickListener
-            viewModel.addComment(postId, text)
-            binding.commentInput.setText("")
+            if (text.isNotEmpty()) {
+                viewModel.addComment(postId, text)
+                binding.commentInput.setText("")
+            }
         }
 
         binding.addWishlistBtn.setOnClickListener {
@@ -57,11 +65,22 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
     }
 
     private fun observeViewModel() {
-        viewModel.isProcessing.observe(viewLifecycleOwner) { isProcessing ->
+        viewModel.isActionProcessing.observe(viewLifecycleOwner) { isProcessing ->
             binding.likeBtn.isEnabled = !isProcessing
             binding.addWishlistBtn.isEnabled = !isProcessing
             binding.addReadlistBtn.isEnabled = !isProcessing
+        }
+
+        viewModel.isCommentProcessing.observe(viewLifecycleOwner) { isProcessing ->
             binding.addCommentBtn.isEnabled = !isProcessing
+        }
+
+        viewModel.observeComments(postId).observe(viewLifecycleOwner) { comments ->
+            commentsAdapter.submitList(comments)
+        }
+
+        viewModel.bookInfo.observe(viewLifecycleOwner) { bookInfo ->
+            BookInfoCardBinder.bind(binding.bookInfoPanel, bookInfo)
         }
 
         viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
@@ -71,7 +90,15 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             binding.author.text = post.bookAuthor
             binding.rating.rating = post.rating.toFloat()
             binding.review.text = post.review
-            binding.meta.text = "${post.likesCount} likes • ${post.commentsCount} comments"
+            binding.meta.text = getString(
+                R.string.post_meta_format,
+                post.username,
+                requireContext().formatRelativeTime(post.createdAt)
+            )
+            binding.likeBtn.text = getString(R.string.post_like_button_format, post.likesCount)
+
+            binding.bookDetailsHeader.isVisible = true
+            viewModel.resolveBookInfo(post)
 
             val isOwnPost = post.userId == Model.currentUserId()
             val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
@@ -83,16 +110,7 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             } else {
                 binding.likeBtn.alpha = 1.0f
             }
-
-            viewModel.observeWishlist(post.bookId).observe(viewLifecycleOwner) { isWishlisted ->
-                val icon = if (isWishlisted) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline
-                binding.addWishlistBtn.setIconResource(icon)
-            }
-
-            viewModel.observeReadlist(post.bookId).observe(viewLifecycleOwner) { isReadlisted ->
-                val icon = if (isReadlisted) R.drawable.ic_check_circle_filled else R.drawable.ic_check_circle_outline
-                binding.addReadlistBtn.setIconResource(icon)
-            }
+            bindBookListStates(post.bookId)
 
             Picasso.get()
                 .load(post.imageUrl ?: post.bookThumbnail)
@@ -103,13 +121,9 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
                 .into(binding.postImage)
         }
 
-        viewModel.observeComments(postId).observe(viewLifecycleOwner) { comments ->
-            commentsAdapter.submitList(comments)
-        }
-
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
 
@@ -125,4 +139,27 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
         super.onDestroyView()
         _binding = null
     }
+
+    private fun bindBookListStates(bookId: String) {
+        if (observedBookId == bookId) return
+
+        wishlistState?.removeObservers(viewLifecycleOwner)
+        readlistState?.removeObservers(viewLifecycleOwner)
+        observedBookId = bookId
+
+        wishlistState = viewModel.observeWishlist(bookId).also { liveData ->
+            liveData.observe(viewLifecycleOwner) { isWishlisted ->
+                val icon = if (isWishlisted) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline
+                binding.addWishlistBtn.setIconResource(icon)
+            }
+        }
+
+        readlistState = viewModel.observeReadlist(bookId).also { liveData ->
+            liveData.observe(viewLifecycleOwner) { isReadlisted ->
+                val icon = if (isReadlisted) R.drawable.ic_check_circle_filled else R.drawable.ic_check_circle_outline
+                binding.addReadlistBtn.setIconResource(icon)
+            }
+        }
+    }
+
 }
