@@ -28,7 +28,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             val password = binding.etPassword.text.toString()
 
             if (email.isEmpty() || password.isEmpty()) {
-                Snackbar.make(binding.root, "Email and password required", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.login_required_error, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -47,13 +47,13 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
         viewModel.error.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { error ->
-                Snackbar.make(binding.root, error, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(error), Snackbar.LENGTH_SHORT).show()
             }
         }
 
         viewModel.loginSuccess.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
-                Snackbar.make(binding.root, "Welcome back!", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.login_success_message, Snackbar.LENGTH_SHORT).show()
                 navigateToPosts()
             }
         }

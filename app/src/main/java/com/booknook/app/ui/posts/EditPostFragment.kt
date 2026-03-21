@@ -11,7 +11,6 @@ import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class EditPostFragment : Fragment(R.layout.fragment_create_post) {
@@ -51,7 +50,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
             if (binding.ratingBar.rating == 0f || review.isEmpty()) {
-                Snackbar.make(binding.root, "rating required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.create_post_rating_required, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             viewModel.updatePost(postId, rating, review, pickedImage)
@@ -95,7 +94,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         viewModel.saveSuccess.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { success ->
                 if (success) {
-                    Snackbar.make(binding.root, "Updated successfully", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, R.string.create_post_update_success, Snackbar.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
             }
@@ -103,7 +102,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

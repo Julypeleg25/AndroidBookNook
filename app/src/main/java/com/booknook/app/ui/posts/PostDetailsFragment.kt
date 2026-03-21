@@ -12,7 +12,6 @@ import com.booknook.app.databinding.FragmentPostDetailsBinding
 import com.booknook.app.model.Model
 import com.booknook.app.util.formatRelativeTime
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
@@ -100,7 +99,7 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             binding.bookDetailsHeader.isVisible = true
             viewModel.resolveBookInfo(post)
 
-            val isOwnPost = post.userId == Model.currentUserId()
+            val isOwnPost = post.userId == Model.authRepository.currentUserId()
             val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
             binding.likeBtn.setIconResource(likeIcon)
             
@@ -123,13 +122,13 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
 
         viewModel.actionFeedback.observe(viewLifecycleOwner) { feedback ->
             feedback?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
                 viewModel.resetFeedback()
             }
         }

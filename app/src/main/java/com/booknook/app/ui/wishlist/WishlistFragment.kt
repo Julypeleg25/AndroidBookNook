@@ -9,7 +9,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentWishlistBinding
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
@@ -30,12 +29,12 @@ class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
     private fun setupAdapters() {
         wishlistAdapter = WishlistAdapter { item ->
             viewModel.removeFromWishlist(item.bookId)
-            Snackbar.make(binding.root, "Removed from wishlist", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.wishlist_removed, Snackbar.LENGTH_SHORT).show()
         }
 
         readlistAdapter = ReadlistAdapter { item ->
             viewModel.removeFromReadlist(item.bookId)
-            Snackbar.make(binding.root, "Removed from readlist", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.readlist_removed, Snackbar.LENGTH_SHORT).show()
         }
 
         binding.wishlistRecycler.layoutManager = LinearLayoutManager(requireContext())
@@ -58,7 +57,7 @@ class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

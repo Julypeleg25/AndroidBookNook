@@ -12,7 +12,6 @@ import com.booknook.app.databinding.FragmentMyPostsBinding
 import com.booknook.app.model.Model
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
@@ -21,7 +20,7 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
     private val viewModel: MyPostsViewModel by viewModels()
 
     private val adapter = PostsAdapter(
-        currentUserId = Model.currentUserId(),
+        currentUserId = Model.authRepository.currentUserId(),
         onClick = { postId ->
             val action = MyPostsFragmentDirections.actionMyPostsToDetails(postId)
             findNavController().navigate(action)
@@ -54,12 +53,12 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
     private fun showDeleteConfirmation(postId: String) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Post")
-            .setMessage("Are you sure you want to delete this post? This action cannot be undone.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Delete") { _, _ ->
+            .setTitle(R.string.delete_post_title)
+            .setMessage(R.string.delete_post_message)
+            .setNegativeButton(R.string.action_cancel, null)
+            .setPositiveButton(R.string.delete_post_confirm) { _, _ ->
                 viewModel.deletePost(postId)
-                Snackbar.make(binding.root, "Post deleted", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
             }
             .show()
     }
@@ -78,7 +77,7 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

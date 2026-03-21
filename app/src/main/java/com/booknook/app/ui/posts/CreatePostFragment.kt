@@ -12,7 +12,6 @@ import com.booknook.app.R
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.booknook.app.domain.Book
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
@@ -68,11 +67,11 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
             if (binding.ratingBar.rating == 0f || review.isEmpty()) {
-                Snackbar.make(binding.root, "rating required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.create_post_rating_required, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (pickedImage == null) {
-                Snackbar.make(binding.root, "photo required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.create_post_photo_required, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -90,7 +89,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
             event.getContentIfNotHandled()?.let { success ->
                 if (success) {
                     com.booknook.app.util.Logger.d("CreatePost", "Consuming success event - Navigating back")
-                    Snackbar.make(binding.root, "Posted successfully!", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, R.string.create_post_success, Snackbar.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
             }
@@ -98,7 +97,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

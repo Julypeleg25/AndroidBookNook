@@ -42,7 +42,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             val username = binding.etUsername.text.toString().trim()
 
             if (email.isEmpty() || password.isEmpty() || username.isEmpty()) {
-                Snackbar.make(binding.root, "Email, password and username required", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.register_required_error, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -61,14 +61,13 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
         viewModel.error.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { error ->
-                Snackbar.make(binding.root, error, Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(error), Snackbar.LENGTH_SHORT).show()
             }
         }
 
         viewModel.registrationSuccess.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let {
-                Snackbar.make(binding.root, "Welcome to BookNook!", Snackbar.LENGTH_SHORT).show()
-                // Navigate to feed and clear the auth stack
+                Snackbar.make(binding.root, R.string.register_success_message, Snackbar.LENGTH_SHORT).show()
                 findNavController().navigate(R.id.action_registerFragment_to_postsFragment)
             }
         }

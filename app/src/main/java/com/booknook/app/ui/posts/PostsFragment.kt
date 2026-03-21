@@ -12,7 +12,6 @@ import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostsBinding
 import com.booknook.app.model.Model
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
 
@@ -21,7 +20,7 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
     private val viewModel: PostsViewModel by viewModels()
 
     private val adapter = PostsAdapter(
-        currentUserId = Model.currentUserId(),
+        currentUserId = Model.authRepository.currentUserId(),
         onClick = { postId ->
             val action = PostsFragmentDirections.actionPostsToDetails(postId)
             findNavController().navigate(action)
@@ -40,12 +39,12 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
 
     private fun showDeleteConfirmation(postId: String) {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Post")
-            .setMessage("Are you sure you want to delete this post? This action cannot be undone.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Delete") { _, _ ->
+            .setTitle(R.string.delete_post_title)
+            .setMessage(R.string.delete_post_message)
+            .setNegativeButton(R.string.action_cancel, null)
+            .setPositiveButton(R.string.delete_post_confirm) { _, _ ->
                 viewModel.deletePost(postId)
-                Snackbar.make(binding.root, "Post deleted", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
             }
             .show()
     }
@@ -82,7 +81,7 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }

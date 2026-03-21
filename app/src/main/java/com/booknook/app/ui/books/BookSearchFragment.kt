@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentBookSearchBinding
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
@@ -86,7 +85,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
             binding.welcomeGroup.isVisible = false
             viewModel.searchBooks(q)
         } else {
-            Snackbar.make(binding.root, "Enter a search query".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.search_query_required, Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -117,7 +116,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }
