@@ -24,6 +24,8 @@ class AppLocalRepository(
     suspend fun upsertPosts(items: List<PostEntity>) = postDao.upsertAll(items)
     suspend fun upsertPost(item: PostEntity) = postDao.upsert(item)
     suspend fun deletePost(postId: String) = postDao.deleteById(postId)
+    suspend fun deletePostsNotIn(ids: List<String>) = postDao.deleteNotIn(ids)
+    suspend fun deleteAllPosts() = postDao.deleteAll()
 
     fun observeWishlist(userId: String) = wishlistDao.getByUser(userId)
     fun observeWishlistExists(key: String) = wishlistDao.observeExistsByKey(key)

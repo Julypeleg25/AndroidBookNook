@@ -43,7 +43,6 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         binding.recycler.layoutManager = layoutManager
         binding.recycler.adapter = adapter
 
-        
         binding.recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
@@ -106,8 +105,8 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
             }
         }
 
-        viewModel.loadingMore.observe(viewLifecycleOwner) { _ ->
-            
+        viewModel.loadingMore.observe(viewLifecycleOwner) { isLoadingMore ->
+            binding.pbLoadingMore.isVisible = isLoadingMore
         }
 
         viewModel.isEmpty.observe(viewLifecycleOwner) { empty ->
@@ -122,8 +121,6 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     }
 
     override fun onDestroyView() {
-        viewModel.clearSearch()
-        hasSearched = false
         super.onDestroyView()
         _binding = null
     }

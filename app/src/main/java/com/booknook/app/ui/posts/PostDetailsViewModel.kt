@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 
 class PostDetailsViewModel : ViewModel() {
 
+    val currentUserId: String? = Model.authRepository.currentUserId()
+
     private val _isActionProcessing = MutableLiveData<Boolean>(false)
     val isActionProcessing: LiveData<Boolean> = _isActionProcessing
 
@@ -44,7 +46,6 @@ class PostDetailsViewModel : ViewModel() {
             try {
                 Model.postsRepository.refreshComments(postId)
             } catch (e: Exception) {
-                com.booknook.app.util.Logger.e("PostDetailsVM", "Failed to refresh comments for $postId", e)
                 _error.value = e.toUserFriendlyMessageRes(R.string.error_comment_refresh)
             }
         }
@@ -60,7 +61,6 @@ class PostDetailsViewModel : ViewModel() {
             val freshBook = try {
                 Model.booksRepository.getBook(post.bookId)
             } catch (e: Exception) {
-                com.booknook.app.util.Logger.e("PostDetailsVM", "Failed to resolve book info for ${post.bookId}", e)
                 _error.value = e.toUserFriendlyMessageRes(R.string.error_book_info_load)
                 null
             } ?: fallbackBook

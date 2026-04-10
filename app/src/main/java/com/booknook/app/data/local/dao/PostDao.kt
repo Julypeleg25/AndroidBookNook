@@ -82,4 +82,10 @@ interface PostDao {
 
     @Query("DELETE FROM posts WHERE id = :postId")
     suspend fun deleteById(postId: String)
+
+    @Query("DELETE FROM posts WHERE id NOT IN (:ids)")
+    suspend fun deleteNotIn(ids: List<String>)
+
+    @Query("DELETE FROM posts")
+    suspend fun deleteAll()
 }

@@ -9,7 +9,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentMyPostsBinding
-import com.booknook.app.model.Model
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 
@@ -19,13 +18,15 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
     private val binding get() = _binding!!
     private val viewModel: MyPostsViewModel by viewModels()
 
-    private val adapter = PostsAdapter(
-        currentUserId = Model.authRepository.currentUserId(),
+    private val adapter by lazy { PostsAdapter(
+        currentUserId = viewModel.currentUserId,
         onClick = { postId ->
             val action = MyPostsFragmentDirections.actionMyPostsToDetails(postId)
             findNavController().navigate(action)
         },
-        showEngagement = false,
+        onLike = { postId ->
+            viewModel.toggleLike(postId)
+        },
         onEdit = { postId ->
             val action = MyPostsFragmentDirections.actionMyPostsToEdit(postId)
             findNavController().navigate(action)
@@ -33,7 +34,7 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
         onDelete = { postId ->
             showDeleteConfirmation(postId)
         }
-    )
+    ) }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -48,7 +49,6 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
         }
 
         observeViewModel()
-        viewModel.refreshPosts()
     }
 
     private fun showDeleteConfirmation(postId: String) {
@@ -58,7 +58,6 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
             .setNegativeButton(R.string.action_cancel, null)
             .setPositiveButton(R.string.delete_post_confirm) { _, _ ->
                 viewModel.deletePost(postId)
-                Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
             }
             .show()
     }
@@ -78,6 +77,13 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
                 Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
+            }
+        }
+
+        viewModel.deleteSuccess.observe(viewLifecycleOwner) { success ->
+            if (success) {
+                Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
+                viewModel.resetDeleteSuccess()
             }
         }
     }

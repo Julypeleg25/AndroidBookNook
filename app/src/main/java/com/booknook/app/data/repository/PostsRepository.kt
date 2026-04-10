@@ -8,15 +8,19 @@ import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.domain.Book
 import com.booknook.app.model.firebase.FirebaseModel
 import com.booknook.app.util.Logger
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class PostsRepository(
     private val local: AppLocalRepository,
-    private val firebase: FirebaseModel
+    private val firebase: FirebaseModel,
+    private val storageModel: com.booknook.app.model.StorageModel
 ) {
     private var lastRefreshTime = 0L
+    private var lastDocument: DocumentSnapshot? = null
+    private var canLoadMorePosts = true
 
     fun observePosts(currentUserId: String): LiveData<List<PostEntity>> = local.observePosts(currentUserId)
 
@@ -48,15 +52,23 @@ class PostsRepository(
 
         val posts = firebase.fetchAllPosts()
         val currentUserId = firebase.currentUserId()
+        val remotePostIds = posts.map { it.id }
 
         withContext(Dispatchers.IO) {
             local.upsertPosts(posts)
+            if (remotePostIds.isEmpty()) {
+                local.deleteAllPosts()
+            } else {
+                local.deletePostsNotIn(remotePostIds) 
+            }
+            
             if (currentUserId != null) {
+                local.clearUserLikes(currentUserId)
                 val likes = posts.filter { it.isLikedByUser }.map {
                     LikeEntity(userId = currentUserId, postId = it.id)
                 }
-                likes.forEach { like ->
-                    local.upsertLike(like)
+                if (likes.isNotEmpty()) {
+                    local.upsertLikes(likes)
                 }
             }
         }
@@ -67,7 +79,7 @@ class PostsRepository(
         val userId = firebase.requireUserId()
         val username = firebase.fetchProfile()?.username ?: DEFAULT_USERNAME
         val postId = UUID.randomUUID().toString()
-        val imageUrl = imageUri?.let { firebase.uploadPostImage(userId, postId, it) }
+        val imageUrl = imageUri?.let { storageModel.uploadPostImage(userId, postId, it) }
         val now = System.currentTimeMillis()
 
         val post = PostEntity(
@@ -101,7 +113,7 @@ class PostsRepository(
         val existing = firebase.getPost(postId) ?: return
         if (existing.userId != userId) return
 
-        val imageUrl = imageUri?.let { firebase.uploadPostImage(userId, postId, it) } ?: existing.imageUrl
+        val imageUrl = imageUri?.let { storageModel.uploadPostImage(userId, postId, it) } ?: existing.imageUrl
         val updated = existing.copy(rating = rating, review = review, imageUrl = imageUrl)
         firebase.updatePost(updated)
         withContext(Dispatchers.IO) {
@@ -110,7 +122,12 @@ class PostsRepository(
     }
 
     suspend fun deletePost(postId: String) {
+        val post = firebase.getPost(postId)
         firebase.deletePost(postId)
+        if (post?.imageUrl != null) {
+            val userId = firebase.requireUserId()
+            storageModel.deletePostImage(userId, postId)
+        }
         withContext(Dispatchers.IO) {
             local.deletePost(postId)
         }
@@ -120,7 +137,6 @@ class PostsRepository(
         val userId = firebase.currentUserId() ?: return
         val post = withContext(Dispatchers.IO) { local.getPost(postId, userId) } ?: return
         if (post.userId == userId) {
-            Logger.d("Likes", "User $userId attempted to like their own post $postId - blocked.")
             return
         }
 
@@ -146,7 +162,6 @@ class PostsRepository(
                 }
             }
         } catch (e: Exception) {
-            Logger.e("Likes", "Backend sync failed for $postId. Reverting local state.", e)
             withContext(Dispatchers.IO) {
                 if (isLiked) {
                     local.upsertLike(LikeEntity(userId, postId))
@@ -188,7 +203,6 @@ class PostsRepository(
             }
             refreshComments(postId)
         } catch (e: Exception) {
-            Logger.e("Comments", "Comment sync failed", e)
             withContext(Dispatchers.IO) {
                 local.upsertPost(post)
             }
@@ -196,8 +210,38 @@ class PostsRepository(
         }
     }
 
+    suspend fun loadMorePosts(): Boolean {
+        if (!canLoadMorePosts) return false
+        val currentUserId = firebase.currentUserId()
+        val (posts, newLastDoc) = firebase.fetchPostsPage(PAGE_SIZE, lastDocument)
+        if (posts.isEmpty()) {
+            canLoadMorePosts = false
+            return false
+        }
+        lastDocument = newLastDoc
+        withContext(Dispatchers.IO) {
+            local.upsertPosts(posts)
+            if (currentUserId != null) {
+                val likes = posts.filter { it.isLikedByUser }.map {
+                    LikeEntity(userId = currentUserId, postId = it.id)
+                }
+                if (likes.isNotEmpty()) {
+                    local.upsertLikes(likes)
+                }
+            }
+        }
+        canLoadMorePosts = posts.size.toLong() >= PAGE_SIZE
+        return canLoadMorePosts
+    }
+
+    fun resetPagination() {
+        lastDocument = null
+        canLoadMorePosts = true
+    }
+
     companion object {
         private const val REFRESH_INTERVAL = 300_000L
         private const val DEFAULT_USERNAME = "User"
+        private const val PAGE_SIZE = 15L
     }
 }

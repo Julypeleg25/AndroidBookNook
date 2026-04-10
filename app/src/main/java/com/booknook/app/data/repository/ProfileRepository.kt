@@ -9,7 +9,8 @@ import kotlinx.coroutines.withContext
 
 class ProfileRepository(
     private val local: AppLocalRepository,
-    private val firebase: FirebaseModel
+    private val firebase: FirebaseModel,
+    private val storageModel: com.booknook.app.model.StorageModel
 ) {
     fun observeLocalUser(): LiveData<UserEntity?> = local.observeUser()
 
@@ -21,7 +22,9 @@ class ProfileRepository(
     }
 
     suspend fun updateProfile(username: String, email: String, avatarUri: Uri?): UserEntity {
-        val updated = firebase.updateProfile(username, email, avatarUri)
+        val uid = firebase.requireUserId()
+        val avatarUrl = avatarUri?.let { storageModel.uploadAvatar(uid, it) } ?: firebase.fetchProfile()?.avatarUrl
+        val updated = firebase.updateProfile(username, email, avatarUrl)
         withContext(Dispatchers.IO) {
             local.upsertUser(updated)
         }

@@ -26,11 +26,15 @@ class WishlistViewModel : ViewModel() {
         return Model.listsRepository.observeReadlist(uid)
     }
 
+    private val _removeFeedback = MutableLiveData<Int?>()
+    val removeFeedback: LiveData<Int?> = _removeFeedback
+
     fun removeFromWishlist(bookId: String) {
         viewModelScope.launch {
             try {
                 val uid = Model.authRepository.currentUserId() ?: return@launch
                 Model.listsRepository.removeFromWishlist(uid, bookId)
+                _removeFeedback.value = R.string.wishlist_removed
             } catch (e: Exception) {
                 _error.value = e.toUserFriendlyMessageRes(R.string.error_wishlist_remove)
             }
@@ -42,9 +46,14 @@ class WishlistViewModel : ViewModel() {
             try {
                 val uid = Model.authRepository.currentUserId() ?: return@launch
                 Model.listsRepository.removeFromReadlist(uid, bookId)
+                _removeFeedback.value = R.string.readlist_removed
             } catch (e: Exception) {
                 _error.value = e.toUserFriendlyMessageRes(R.string.error_readlist_remove)
             }
         }
+    }
+
+    fun resetRemoveFeedback() {
+        _removeFeedback.value = null
     }
 }

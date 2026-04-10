@@ -129,4 +129,5 @@ Search for a book and publish your thoughts.</string>
     <string name="wishlist_empty">No books in wishlist yet.</string>
     <string name="readlist_title">Readlist</string>
     <string name="readlist_empty">No books in readlist yet.</string>
+    <string name="post_edit_action">Edit post</string>
 </resources>

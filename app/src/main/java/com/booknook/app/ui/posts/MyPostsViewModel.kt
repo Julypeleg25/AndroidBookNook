@@ -4,13 +4,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.booknook.app.R
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.model.Model
 import com.booknook.app.util.toUserFriendlyMessageRes
+import com.booknook.app.R
 import kotlinx.coroutines.launch
 
 class MyPostsViewModel : ViewModel() {
+
+    val currentUserId: String? = Model.authRepository.currentUserId()
 
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> = _loading
@@ -29,21 +31,28 @@ class MyPostsViewModel : ViewModel() {
             try {
                 Model.postsRepository.refreshPosts(force = true)
             } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_posts_refresh)
             } finally {
                 _loading.value = false
             }
         }
     }
 
+    private val _deleteSuccess = MutableLiveData<Boolean>()
+    val deleteSuccess: LiveData<Boolean> = _deleteSuccess
+
     fun deletePost(postId: String) {
         viewModelScope.launch {
             try {
                 Model.postsRepository.deletePost(postId)
+                _deleteSuccess.value = true
             } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_post_delete)
+                _error.value = R.string.error_post_delete
             }
         }
+    }
+
+    fun resetDeleteSuccess() {
+        _deleteSuccess.value = false
     }
 
     private val _isLikeProcessing = MutableLiveData<Boolean>(false)
@@ -51,14 +60,11 @@ class MyPostsViewModel : ViewModel() {
     fun toggleLike(postId: String) {
         if (_isLikeProcessing.value == true) return
         _isLikeProcessing.value = true
-        com.booknook.app.util.Logger.d("MyPostsVM", "User toggled like for $postId")
         
         viewModelScope.launch {
             try {
                 Model.postsRepository.toggleLike(postId)
             } catch (e: Exception) {
-                com.booknook.app.util.Logger.e("MyPostsVM", "Like toggle failed for $postId", e)
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_like_update)
             } finally {
                 _isLikeProcessing.value = false
             }

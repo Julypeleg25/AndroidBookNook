@@ -2,17 +2,16 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.databinding.FragmentPostDetailsBinding
-import com.booknook.app.model.Model
 import com.booknook.app.util.formatRelativeTime
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
+import androidx.core.view.isVisible
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
 
@@ -56,6 +55,11 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             viewModel.toggleReadlist(postId)
         }
 
+        binding.editBtn.setOnClickListener {
+            val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
+            findNavController().navigate(action)
+        }
+
         binding.title.setOnLongClickListener {
             val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
             findNavController().navigate(action)
@@ -68,10 +72,12 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             binding.likeBtn.isEnabled = !isProcessing
             binding.addWishlistBtn.isEnabled = !isProcessing
             binding.addReadlistBtn.isEnabled = !isProcessing
+            binding.pbAction.isVisible = isProcessing
         }
 
         viewModel.isCommentProcessing.observe(viewLifecycleOwner) { isProcessing ->
-            binding.addCommentBtn.isEnabled = !isProcessing
+            binding.addCommentBtn.isVisible = !isProcessing
+            binding.pbComment.isVisible = isProcessing
         }
 
         viewModel.observeComments(postId).observe(viewLifecycleOwner) { comments ->
@@ -99,14 +105,17 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             binding.bookDetailsHeader.isVisible = true
             viewModel.resolveBookInfo(post)
 
-            val isOwnPost = post.userId == Model.authRepository.currentUserId()
+            val isOwnPost = post.userId == viewModel.currentUserId
             val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
             binding.likeBtn.setIconResource(likeIcon)
             
+            binding.editBtn.isVisible = isOwnPost
+
             if (isOwnPost) {
                 binding.likeBtn.isEnabled = false
                 binding.likeBtn.alpha = 0.5f
             } else {
+                binding.likeBtn.isEnabled = true
                 binding.likeBtn.alpha = 1.0f
             }
             bindBookListStates(post.bookId)
@@ -160,5 +169,4 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
             }
         }
     }
-
 }

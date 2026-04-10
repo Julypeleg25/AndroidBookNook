@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.booknook.app.R
 import com.booknook.app.model.Model
+import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.launch
 
