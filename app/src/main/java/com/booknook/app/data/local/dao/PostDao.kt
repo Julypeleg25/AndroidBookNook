@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.paging.PagingSource
 import com.booknook.app.data.local.entities.PostEntity
 
 @Dao

@@ -41,7 +41,7 @@ class ApiModel {
         val q = query.lowercase().trim()
         if (q.isBlank()) return emptyList()
 
-        val refinedQuery = "intitle:\"$q\" OR inauthor:\"$q\""
+        val refinedQuery = q
         com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $refinedQuery (startIndex: $startIndex)")
         val res = api.search(refinedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
         val items = res.items ?: return emptyList()

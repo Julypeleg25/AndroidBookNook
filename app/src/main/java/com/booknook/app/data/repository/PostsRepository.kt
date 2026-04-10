@@ -2,12 +2,13 @@ package com.booknook.app.data.repository
 
 import android.net.Uri
 import androidx.lifecycle.LiveData
+import com.booknook.app.data.local.AppLocalRepository
 import com.booknook.app.data.local.entities.CommentEntity
 import com.booknook.app.data.local.entities.LikeEntity
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.domain.Book
+import com.booknook.app.model.StorageModel
 import com.booknook.app.model.firebase.FirebaseModel
-import com.booknook.app.util.Logger
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,11 +17,41 @@ import java.util.UUID
 class PostsRepository(
     private val local: AppLocalRepository,
     private val firebase: FirebaseModel,
-    private val storageModel: com.booknook.app.model.StorageModel
+    private val storageModel: StorageModel
 ) {
     private var lastRefreshTime = 0L
+    private val REFRESH_INTERVAL = 300_000L
+    private val PAGE_SIZE = 15L
     private var lastDocument: DocumentSnapshot? = null
     private var canLoadMorePosts = true
+
+                initialLoadSize = PAGE_SIZE.toInt()
+            ),
+            pagingSourceFactory = { local.observePostsPaging(currentUserId) }
+        ).flow
+    }
+
+    fun getMyPostStream(userId: String, currentUserId: String): Flow<PagingData<PostEntity>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = PAGE_SIZE.toInt(),
+                enablePlaceholders = false,
+                initialLoadSize = PAGE_SIZE.toInt()
+            ),
+            pagingSourceFactory = { local.observeMyPostsPaging(userId, currentUserId) }
+        ).flow
+    }
+
+    fun searchPostStream(query: String, currentUserId: String): Flow<PagingData<PostEntity>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = PAGE_SIZE.toInt(),
+                enablePlaceholders = false,
+                initialLoadSize = PAGE_SIZE.toInt()
+            ),
+            pagingSourceFactory = { local.searchPostsByQueryPaging(query, currentUserId) }
+        ).flow
+    }
 
     fun observePosts(currentUserId: String): LiveData<List<PostEntity>> = local.observePosts(currentUserId)
 
@@ -50,20 +81,18 @@ class PostsRepository(
         val now = System.currentTimeMillis()
         if (!force && now - lastRefreshTime < REFRESH_INTERVAL) return
 
-        val posts = firebase.fetchAllPosts()
+        resetPagination()
         val currentUserId = firebase.currentUserId()
-        val remotePostIds = posts.map { it.id }
+        val (posts, newLastDoc) = firebase.fetchPostsPage(PAGE_SIZE, null)
+        
+        lastDocument = newLastDoc
+        canLoadMorePosts = posts.size.toLong() >= PAGE_SIZE
 
         withContext(Dispatchers.IO) {
+            local.deleteAllPosts()
             local.upsertPosts(posts)
-            if (remotePostIds.isEmpty()) {
-                local.deleteAllPosts()
-            } else {
-                local.deletePostsNotIn(remotePostIds) 
-            }
             
             if (currentUserId != null) {
-                local.clearUserLikes(currentUserId)
                 val likes = posts.filter { it.isLikedByUser }.map {
                     LikeEntity(userId = currentUserId, postId = it.id)
                 }

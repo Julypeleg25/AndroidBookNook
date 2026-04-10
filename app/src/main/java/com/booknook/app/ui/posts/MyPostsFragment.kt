@@ -11,6 +11,9 @@ import com.booknook.app.R
 import com.booknook.app.databinding.FragmentMyPostsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 

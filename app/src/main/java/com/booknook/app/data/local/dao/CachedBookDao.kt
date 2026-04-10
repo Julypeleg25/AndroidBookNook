@@ -27,4 +27,7 @@ interface CachedBookDao {
 
     @Query("DELETE FROM cached_books WHERE lastFetchedAt < :minTime")
     suspend fun deleteOlderThan(minTime: Long)
+
+    @Query("DELETE FROM cached_books")
+    suspend fun deleteAll()
 }

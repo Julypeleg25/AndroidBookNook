@@ -57,4 +57,12 @@ class AppLocalRepository(
     suspend fun upsertComment(item: CommentEntity) = commentDao.insert(item)
     suspend fun upsertComments(items: List<CommentEntity>) = commentDao.insertAll(items)
     suspend fun deleteCommentsByPost(postId: String) = commentDao.deleteByPost(postId)
+
+    suspend fun clearAllData() {
+        postDao.deleteAll()
+        wishlistDao.deleteAll()
+        readlistDao.deleteAll()
+        userDao.clear()
+        cachedBookDao.deleteAll()
+    }
 }

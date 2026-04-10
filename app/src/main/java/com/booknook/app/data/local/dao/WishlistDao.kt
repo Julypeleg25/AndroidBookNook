@@ -23,4 +23,7 @@ interface WishlistDao {
 
     @Query("DELETE FROM wishlist WHERE key = :key")
     suspend fun deleteByKey(key: String)
+
+    @Query("DELETE FROM wishlist")
+    suspend fun deleteAll()
 }

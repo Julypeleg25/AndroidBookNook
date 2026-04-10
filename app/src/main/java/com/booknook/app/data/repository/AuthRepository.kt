@@ -7,7 +7,8 @@ import com.booknook.app.model.StorageModel
 class AuthRepository(
     private val firebase: FirebaseModel,
     private val profileRepository: ProfileRepository,
-    private val storageModel: StorageModel
+    private val storageModel: StorageModel,
+    private val local: AppLocalRepository
 ) {
     fun currentUserId(): String? = firebase.currentUserId()
 
@@ -29,5 +30,6 @@ class AuthRepository(
     suspend fun logout() {
         firebase.logout()
         profileRepository.clearLocalProfile()
+        local.clearAllData()
     }
 }

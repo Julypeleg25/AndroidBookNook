@@ -23,4 +23,7 @@ interface ReadlistDao {
 
     @Query("DELETE FROM readlist WHERE key = :key")
     suspend fun deleteByKey(key: String)
+
+    @Query("DELETE FROM readlist")
+    suspend fun deleteAll()
 }

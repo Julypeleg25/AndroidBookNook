@@ -19,7 +19,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     private var _binding: FragmentBookSearchBinding? = null
     private val binding get() = _binding!!
     private val viewModel: BookSearchViewModel by viewModels()
-    private var hasSearched = false
+
 
     private val adapter = BookAdapter { book ->
         val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
@@ -70,8 +70,8 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
         binding.queryInput.doAfterTextChanged { text ->
             val hasText = !text.isNullOrBlank()
-            binding.clearSearchBtn.isVisible = hasText || hasSearched
-            if (!hasText && hasSearched) {
+            binding.clearSearchBtn.isVisible = hasText || viewModel.hasSearched.value == true
+            if (!hasText && viewModel.hasSearched.value == true) {
                 clearSearchUi()
             }
         }
@@ -80,7 +80,6 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     private fun performSearch() {
         val q = binding.queryInput.text.toString().trim()
         if (q.isNotEmpty()) {
-            hasSearched = true
             binding.welcomeGroup.isVisible = false
             viewModel.searchBooks(q)
         } else {
@@ -92,9 +91,11 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         viewModel.searchResults.observe(viewLifecycleOwner) { books ->
             adapter.submitList(books)
             binding.recycler.isVisible = books.isNotEmpty()
-            binding.welcomeGroup.isVisible = !hasSearched
-            binding.emptyText.isVisible = hasSearched && books.isEmpty() && viewModel.loading.value != true
-            binding.clearSearchBtn.isVisible = binding.queryInput.text?.isNotBlank() == true || hasSearched
+            updateEmptyAndWelcomeVisibility()
+        }
+
+        viewModel.hasSearched.observe(viewLifecycleOwner) {
+            updateEmptyAndWelcomeVisibility()
         }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
@@ -110,7 +111,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         }
 
         viewModel.isEmpty.observe(viewLifecycleOwner) { empty ->
-            binding.emptyText.isVisible = empty && hasSearched
+            updateEmptyAndWelcomeVisibility()
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
@@ -127,11 +128,21 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
     private fun clearSearchUi() {
         viewModel.clearSearch()
-        hasSearched = false
         binding.queryInput.setText("")
         binding.recycler.isVisible = false
         binding.emptyText.isVisible = false
         binding.welcomeGroup.isVisible = true
         binding.clearSearchBtn.isVisible = false
+    }
+
+    private fun updateEmptyAndWelcomeVisibility() {
+        val hasSearched = viewModel.hasSearched.value == true
+        val isEmpty = viewModel.isEmpty.value == true
+        val results = viewModel.searchResults.value ?: emptyList()
+        val isLoading = viewModel.loading.value == true
+
+        binding.welcomeGroup.isVisible = !hasSearched
+        binding.emptyText.isVisible = hasSearched && isEmpty && !isLoading
+        binding.clearSearchBtn.isVisible = binding.queryInput.text?.isNotBlank() == true || hasSearched
     }
 }

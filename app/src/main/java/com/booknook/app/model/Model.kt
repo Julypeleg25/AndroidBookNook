@@ -51,7 +51,7 @@ object Model {
             db.commentDao()
         )
         profileRepository = ProfileRepository(localRepository, firebase, storageModel)
-        authRepository = AuthRepository(firebase, profileRepository, storageModel)
+        authRepository = AuthRepository(firebase, profileRepository, storageModel, localRepository)
         booksRepository = BooksRepository(localRepository, api)
         postsRepository = PostsRepository(localRepository, firebase, storageModel)
         listsRepository = ListsRepository(localRepository)

@@ -14,6 +14,10 @@ class MyPostsViewModel : ViewModel() {
 
     val currentUserId: String? = Model.authRepository.currentUserId()
 
+    init {
+        refreshPosts()
+    }
+
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> = _loading
 

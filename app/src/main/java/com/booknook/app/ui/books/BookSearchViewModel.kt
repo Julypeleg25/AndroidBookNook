@@ -29,6 +29,9 @@ class BookSearchViewModel : ViewModel() {
     private val _isEmpty = MutableLiveData(false)
     val isEmpty: LiveData<Boolean> = _isEmpty
 
+    private val _hasSearched = MutableLiveData(false)
+    val hasSearched: LiveData<Boolean> = _hasSearched
+
     private var currentQuery: String = ""
     private var startIndex = 0
     private var canLoadMore = true
@@ -48,6 +51,7 @@ class BookSearchViewModel : ViewModel() {
         startIndex = 0
         canLoadMore = true
         _searchResults.value = emptyList()
+        _hasSearched.value = true
 
         searchJob = viewModelScope.launch {
             try {
@@ -104,5 +108,6 @@ class BookSearchViewModel : ViewModel() {
         _error.value = null
         _searchResults.value = emptyList()
         _isEmpty.value = false
+        _hasSearched.value = false
     }
 }
