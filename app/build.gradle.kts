@@ -70,6 +70,9 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
 
+    // Cloudinary
+    implementation(libs.cloudinary.android)
+
     // Images
     implementation(libs.picasso)
 
