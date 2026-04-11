@@ -7,8 +7,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
 import com.booknook.app.databinding.RowBookBinding
-import com.booknook.app.domain.Book
-import com.squareup.picasso.Picasso
+import com.booknook.app.model.Book
+import com.booknook.app.util.loadRemoteImage
 
 class BookAdapter(
     private val onClick: (Book) -> Unit
@@ -53,13 +53,7 @@ class BookAdapter(
                 binding.pageCount.visibility = android.view.View.GONE
             }
 
-            Picasso.get()
-                .load(book.thumbnail)
-                .placeholder(R.drawable.book_placeholder)
-                .error(R.drawable.book_placeholder)
-                .fit()
-                .centerCrop()
-                .into(binding.thumb)
+            binding.thumb.loadRemoteImage(book.thumbnail, R.drawable.book_placeholder)
             binding.root.setOnClickListener { onClick(book) }
         }
     }
