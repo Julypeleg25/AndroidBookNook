@@ -2,27 +2,34 @@ package com.booknook.app.ui.posts
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.LiveData
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentPostDetailsBinding
 import com.booknook.app.util.formatRelativeTime
+import com.booknook.app.util.loadRemoteImage
+import com.booknook.app.util.nullIfBlank
 import com.google.android.material.snackbar.Snackbar
-import com.squareup.picasso.Picasso
-import androidx.core.view.isVisible
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
 
     private var _binding: FragmentPostDetailsBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: PostDetailsViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: PostDetailsViewModel by viewModels {
+        PostDetailsViewModel.factory(
+            postsRepository = app.postsRepository,
+            booksRepository = app.booksRepository,
+            listsRepository = app.listsRepository,
+            authRepository = app.authRepository
+        )
+    }
     private val commentsAdapter = CommentsAdapter()
+    private var lastBoundBookInfo: BookInfoCardModel? = null
     private lateinit var postId: String
-    private var observedBookId: String? = null
-    private var wishlistState: LiveData<Boolean>? = null
-    private var readlistState: LiveData<Boolean>? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -31,142 +38,115 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
 
         binding.commentsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
         binding.commentsRecyclerView.adapter = commentsAdapter
+        binding.commentsRecyclerView.itemAnimator = null
 
         observeViewModel()
-        viewModel.refreshComments(postId)
+        viewModel.loadPost(postId)
 
         binding.likeBtn.setOnClickListener {
-            viewModel.toggleLike(postId)
+            viewModel.onLikeClicked()
         }
 
         binding.addCommentBtn.setOnClickListener {
-            val text = binding.commentInput.text.toString().trim()
-            if (text.isNotEmpty()) {
-                viewModel.addComment(postId, text)
-                binding.commentInput.setText("")
-            }
+            viewModel.onAddCommentSubmitted(binding.commentInput.text.toString().trim())
         }
 
         binding.addWishlistBtn.setOnClickListener {
-            viewModel.toggleWishlist(postId)
+            viewModel.onWishlistClicked()
         }
 
         binding.addReadlistBtn.setOnClickListener {
-            viewModel.toggleReadlist(postId)
+            viewModel.onReadlistClicked()
         }
 
         binding.editBtn.setOnClickListener {
-            val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
-            findNavController().navigate(action)
+            viewModel.onEditRequested()
         }
 
         binding.title.setOnLongClickListener {
-            val action = PostDetailsFragmentDirections.actionDetailsToEdit(postId)
-            findNavController().navigate(action)
+            viewModel.onEditRequested()
             true
         }
     }
 
     private fun observeViewModel() {
-        viewModel.isActionProcessing.observe(viewLifecycleOwner) { isProcessing ->
-            binding.likeBtn.isEnabled = !isProcessing
-            binding.addWishlistBtn.isEnabled = !isProcessing
-            binding.addReadlistBtn.isEnabled = !isProcessing
-            binding.pbAction.isVisible = isProcessing
-        }
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            binding.pbAction.isVisible = state.isActionProcessing
+            binding.addCommentBtn.isVisible = !state.isCommentProcessing
+            binding.pbComment.isVisible = state.isCommentProcessing
+            binding.bookDetailsHeader.isVisible = state.bookInfo != null || state.post != null
 
-        viewModel.isCommentProcessing.observe(viewLifecycleOwner) { isProcessing ->
-            binding.addCommentBtn.isVisible = !isProcessing
-            binding.pbComment.isVisible = isProcessing
-        }
-
-        viewModel.observeComments(postId).observe(viewLifecycleOwner) { comments ->
-            commentsAdapter.submitList(comments)
-        }
-
-        viewModel.bookInfo.observe(viewLifecycleOwner) { bookInfo ->
-            BookInfoCardBinder.bind(binding.bookInfoPanel, bookInfo)
-        }
-
-        viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
-            if (post == null) return@observe
-
-            binding.title.text = post.bookTitle
-            binding.author.text = post.bookAuthor
-            binding.rating.rating = post.rating.toFloat()
-            binding.review.text = post.review
-            binding.meta.text = getString(
-                R.string.post_meta_format,
-                post.username,
-                requireContext().formatRelativeTime(post.createdAt)
+            binding.addWishlistBtn.isEnabled = !state.isActionProcessing
+            binding.addReadlistBtn.isEnabled = !state.isActionProcessing
+            binding.addWishlistBtn.setIconResource(
+                if (state.isWishlisted) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline
             )
-            binding.likeBtn.text = getString(R.string.post_like_button_format, post.likesCount)
+            binding.addReadlistBtn.setIconResource(
+                if (state.isReadlisted) R.drawable.ic_check_circle_filled else R.drawable.ic_check_circle_outline
+            )
 
-            binding.bookDetailsHeader.isVisible = true
-            viewModel.resolveBookInfo(post)
-
-            val isOwnPost = post.userId == viewModel.currentUserId
-            val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-            binding.likeBtn.setIconResource(likeIcon)
-            
-            binding.editBtn.isVisible = isOwnPost
-
-            if (isOwnPost) {
-                binding.likeBtn.isEnabled = false
-                binding.likeBtn.alpha = 0.5f
-            } else {
-                binding.likeBtn.isEnabled = true
-                binding.likeBtn.alpha = 1.0f
+            commentsAdapter.submitList(state.comments)
+            if (state.bookInfo == null) {
+                lastBoundBookInfo = null
+            } else if (state.bookInfo != lastBoundBookInfo) {
+                val bookInfo = state.bookInfo
+                BookInfoCardBinder.bind(binding.bookInfoPanel, bookInfo)
+                lastBoundBookInfo = bookInfo
             }
-            bindBookListStates(post.bookId)
 
-            Picasso.get()
-                .load(post.imageUrl ?: post.bookThumbnail)
-                .placeholder(R.drawable.book_placeholder)
-                .error(R.drawable.book_placeholder)
-                .fit()
-                .centerCrop()
-                .into(binding.postImage)
+            state.post?.let { post ->
+                binding.title.text = post.bookTitle
+                binding.author.text = post.bookAuthor
+                binding.rating.rating = post.rating.toFloat()
+                binding.review.text = post.review
+                binding.meta.text = getString(
+                    R.string.post_meta_format,
+                    post.username,
+                    requireContext().formatRelativeTime(post.createdAt)
+                )
+                binding.likeBtn.text = getString(R.string.post_like_button_format, post.likesCount)
+                binding.likeBtn.setIconResource(
+                    if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+                )
+
+                binding.editBtn.isVisible = state.canEdit
+
+                val canLike = !state.isActionProcessing && !state.canEdit
+                binding.likeBtn.isEnabled = canLike
+                binding.likeBtn.alpha = if (canLike) 1.0f else 0.5f
+
+                binding.postImage.loadRemoteImage(
+                    post.imageUrl.nullIfBlank() ?: post.bookThumbnail,
+                    R.drawable.book_placeholder
+                )
+            }
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
-            }
-        }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is PostDetailsEvent.NavigateToEdit -> {
+                        val direction = PostDetailsFragmentDirections.actionDetailsToEdit(action.postId)
+                        findNavController().navigate(direction)
+                    }
 
-        viewModel.actionFeedback.observe(viewLifecycleOwner) { feedback ->
-            feedback?.let {
-                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
-                viewModel.resetFeedback()
+                    is PostDetailsEvent.CommentAdded -> {
+                        binding.commentInput.setText("")
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+
+                    is PostDetailsEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
 
     override fun onDestroyView() {
+        binding.commentsRecyclerView.adapter = null
+        lastBoundBookInfo = null
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun bindBookListStates(bookId: String) {
-        if (observedBookId == bookId) return
-
-        wishlistState?.removeObservers(viewLifecycleOwner)
-        readlistState?.removeObservers(viewLifecycleOwner)
-        observedBookId = bookId
-
-        wishlistState = viewModel.observeWishlist(bookId).also { liveData ->
-            liveData.observe(viewLifecycleOwner) { isWishlisted ->
-                val icon = if (isWishlisted) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline
-                binding.addWishlistBtn.setIconResource(icon)
-            }
-        }
-
-        readlistState = viewModel.observeReadlist(bookId).also { liveData ->
-            liveData.observe(viewLifecycleOwner) { isReadlisted ->
-                val icon = if (isReadlisted) R.drawable.ic_check_circle_filled else R.drawable.ic_check_circle_outline
-                binding.addReadlistBtn.setIconResource(icon)
-            }
-        }
     }
 }

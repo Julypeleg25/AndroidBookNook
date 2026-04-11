@@ -1,159 +1,220 @@
 package com.booknook.app.ui.posts
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.booknook.app.R
 import com.booknook.app.data.local.entities.CommentEntity
 import com.booknook.app.data.local.entities.PostEntity
-import com.booknook.app.domain.Book
-import com.booknook.app.model.Model
+import com.booknook.app.data.repository.AuthRepository
+import com.booknook.app.data.repository.BooksRepository
+import com.booknook.app.data.repository.ListsRepository
+import com.booknook.app.data.repository.PostsRepository
+import com.booknook.app.model.Book
+import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.launch
 
-class PostDetailsViewModel : ViewModel() {
+class PostDetailsViewModel(
+    private val postsRepository: PostsRepository,
+    private val booksRepository: BooksRepository,
+    private val listsRepository: ListsRepository,
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
-    val currentUserId: String? = Model.authRepository.currentUserId()
+    val currentUserId: String? = authRepository.currentUserId()
 
-    private val _isActionProcessing = MutableLiveData<Boolean>(false)
-    val isActionProcessing: LiveData<Boolean> = _isActionProcessing
+    private val _uiState = MediatorLiveData(PostDetailsUiState(currentUserId = currentUserId))
+    val uiState: LiveData<PostDetailsUiState> = _uiState
 
-    private val _isCommentProcessing = MutableLiveData<Boolean>(false)
-    val isCommentProcessing: LiveData<Boolean> = _isCommentProcessing
-
-    private val _error = MutableLiveData<Int?>()
-    val error: LiveData<Int?> = _error
-
-    private val _actionFeedback = MutableLiveData<Int?>()
-    val actionFeedback: LiveData<Int?> = _actionFeedback
-
-    private val _bookInfo = MutableLiveData<BookInfoCardModel>()
-    val bookInfo: LiveData<BookInfoCardModel> = _bookInfo
+    private val _event = MutableLiveData<Event<PostDetailsEvent>>()
+    val event: LiveData<Event<PostDetailsEvent>> = _event
 
     private var resolvedBook: Book? = null
     private var resolvedBookId: String? = null
+    private var currentPostId: String? = null
+    private var postSource: LiveData<PostEntity?>? = null
+    private var commentsSource: LiveData<List<CommentEntity>>? = null
+    private var wishlistSource: LiveData<Boolean>? = null
+    private var readlistSource: LiveData<Boolean>? = null
 
-    fun observePost(postId: String): LiveData<PostEntity?> {
-        return Model.postsRepository.observePost(postId, Model.authRepository.currentUserId().orEmpty())
+    init {
+        _uiState.value = PostDetailsUiState(currentUserId = currentUserId)
     }
 
-    fun observeComments(postId: String): LiveData<List<CommentEntity>> =
-        Model.postsRepository.observeComments(postId)
+    fun loadPost(postId: String) {
+        if (currentPostId == postId) return
 
-    fun refreshComments(postId: String) {
+        currentPostId = postId
+        resolvedBook = null
+        resolvedBookId = null
+        _uiState.value = _uiState.value?.copy(isContentLoading = true)
+
+        postSource?.let { _uiState.removeSource(it) }
+        commentsSource?.let { _uiState.removeSource(it) }
+
+        postSource = postsRepository.observePost(postId, currentUserId.orEmpty()).also { source ->
+            _uiState.addSource(source) { post ->
+                val currentState = _uiState.value ?: PostDetailsUiState(currentUserId = currentUserId)
+                _uiState.value = currentState.copy(
+                    post = post,
+                    canEdit = post?.userId == currentUserId,
+                    isContentLoading = false
+                )
+                if (post != null) {
+                    resolveBookInfo(post)
+                    observeBookMembership(post.bookId)
+                }
+            }
+        }
+
+        commentsSource = postsRepository.observeComments(postId).also { source ->
+            _uiState.addSource(source) { comments ->
+                _uiState.value = _uiState.value?.copy(comments = comments)
+            }
+        }
+
+        refreshComments()
+    }
+
+    fun onLikeClicked() {
+        val postId = currentPostId ?: return
+        if (_uiState.value?.isActionProcessing == true) return
+
+        _uiState.value = _uiState.value?.copy(isActionProcessing = true)
         viewModelScope.launch {
             try {
-                Model.postsRepository.refreshComments(postId)
+                postsRepository.toggleLike(postId)
             } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_comment_refresh)
+                _event.value = Event(PostDetailsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_like_update)))
+            } finally {
+                _uiState.value = _uiState.value?.copy(isActionProcessing = false)
             }
         }
     }
 
+    fun onWishlistClicked() {
+        toggleListMembership(
+            toggle = { userId, book -> listsRepository.toggleWishlist(userId, book) },
+            addedMessageRes = R.string.wishlist_added,
+            removedMessageRes = R.string.wishlist_removed
+        )
+    }
+
+    fun onReadlistClicked() {
+        toggleListMembership(
+            toggle = { userId, book -> listsRepository.toggleReadlist(userId, book) },
+            addedMessageRes = R.string.readlist_added,
+            removedMessageRes = R.string.readlist_removed
+        )
+    }
+
+    private fun toggleListMembership(
+        toggle: suspend (String, Book) -> Boolean,
+        @StringRes addedMessageRes: Int,
+        @StringRes removedMessageRes: Int
+    ) {
+        val post = _uiState.value?.post ?: return
+        if (_uiState.value?.isActionProcessing == true) return
+
+        _uiState.value = _uiState.value?.copy(isActionProcessing = true)
+        viewModelScope.launch {
+            try {
+                val userId = currentUserId ?: return@launch
+                val book = resolvedBook?.takeIf { it.id == post.bookId } ?: post.toBook()
+                val added = toggle(userId, book)
+                val message = if (added) addedMessageRes else removedMessageRes
+                _event.value = Event(PostDetailsEvent.ShowMessage(message))
+            } catch (e: Exception) {
+                _event.value = Event(PostDetailsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_post_action)))
+            } finally {
+                _uiState.value = _uiState.value?.copy(isActionProcessing = false)
+            }
+        }
+    }
+
+    fun onAddCommentSubmitted(text: String) {
+        val postId = currentPostId ?: return
+        if (text.isBlank()) {
+            _event.value = Event(PostDetailsEvent.ShowMessage(R.string.error_comment_required))
+            return
+        }
+
+        _uiState.value = _uiState.value?.copy(isCommentProcessing = true)
+        viewModelScope.launch {
+            try {
+                postsRepository.addComment(postId, text)
+                _event.value = Event(PostDetailsEvent.CommentAdded(R.string.comment_added))
+            } catch (e: Exception) {
+                _event.value = Event(PostDetailsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_comment_add)))
+            } finally {
+                _uiState.value = _uiState.value?.copy(isCommentProcessing = false)
+            }
+        }
+    }
+
+    fun onEditRequested() {
+        currentPostId?.let { postId ->
+            _event.value = Event(PostDetailsEvent.NavigateToEdit(postId))
+        }
+    }
+
     fun resolveBookInfo(post: PostEntity) {
-        if (resolvedBookId == post.bookId && _bookInfo.value != null) return
+        if (resolvedBookId == post.bookId && _uiState.value?.bookInfo != null) return
 
         val fallbackBook = post.toBook()
-        _bookInfo.value = fallbackBook.toCardModel()
+        _uiState.value = _uiState.value?.copy(bookInfo = fallbackBook.toCardModel())
 
         viewModelScope.launch {
             val freshBook = try {
-                Model.booksRepository.getBook(post.bookId)
+                booksRepository.getBook(post.bookId)
             } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_book_info_load)
+                _event.value = Event(PostDetailsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_book_info_load)))
                 null
             } ?: fallbackBook
 
             resolvedBook = freshBook
             resolvedBookId = post.bookId
-            _bookInfo.value = freshBook.toCardModel()
+            _uiState.value = _uiState.value?.copy(bookInfo = freshBook.toCardModel())
         }
     }
 
-    fun observeWishlist(bookId: String): LiveData<Boolean> {
-        val uid = Model.authRepository.currentUserId() ?: return MutableLiveData(false)
-        return Model.listsRepository.observeWishlistExists(uid, bookId)
-    }
-
-    fun observeReadlist(bookId: String): LiveData<Boolean> {
-        val uid = Model.authRepository.currentUserId() ?: return MutableLiveData(false)
-        return Model.listsRepository.observeReadlistExists(uid, bookId)
-    }
-
-    fun toggleLike(postId: String) {
-        if (_isActionProcessing.value == true) return
-        _isActionProcessing.value = true
-        
+    private fun refreshComments() {
+        val postId = currentPostId ?: return
         viewModelScope.launch {
             try {
-                Model.postsRepository.toggleLike(postId)
+                postsRepository.refreshComments(postId)
             } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_like_update)
-            } finally {
-                _isActionProcessing.value = false
+                _event.value = Event(PostDetailsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_comment_refresh)))
             }
         }
     }
 
-    fun toggleWishlist(postId: String) {
-        if (_isActionProcessing.value == true) return
-        _isActionProcessing.value = true
-        
-        viewModelScope.launch {
-            try {
-                val post = Model.postsRepository.getPost(postId, Model.authRepository.currentUserId().orEmpty()) ?: return@launch
-                val book = resolvedBook?.takeIf { it.id == post.bookId } ?: post.toBook()
-                val userId = Model.authRepository.currentUserId() ?: return@launch
-                val added = Model.listsRepository.toggleWishlist(userId, book)
-                _actionFeedback.value = if (added) R.string.wishlist_added else R.string.wishlist_removed
-            } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_post_action)
-            } finally {
-                _isActionProcessing.value = false
-            }
-        }
-    }
+    private fun observeBookMembership(bookId: String) {
+        wishlistSource?.let { _uiState.removeSource(it) }
+        readlistSource?.let { _uiState.removeSource(it) }
 
-    fun toggleReadlist(postId: String) {
-        if (_isActionProcessing.value == true) return
-        _isActionProcessing.value = true
-        
-        viewModelScope.launch {
-            try {
-                val post = Model.postsRepository.getPost(postId, Model.authRepository.currentUserId().orEmpty()) ?: return@launch
-                val book = resolvedBook?.takeIf { it.id == post.bookId } ?: post.toBook()
-                val userId = Model.authRepository.currentUserId() ?: return@launch
-                val added = Model.listsRepository.toggleReadlist(userId, book)
-                _actionFeedback.value = if (added) R.string.readlist_added else R.string.readlist_removed
-            } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_post_action)
-            } finally {
-                _isActionProcessing.value = false
-            }
-        }
-    }
-
-    fun addComment(postId: String, text: String) {
-        if (text.isBlank()) {
-            _error.value = R.string.error_comment_required
+        val userId = currentUserId
+        if (userId == null) {
+            _uiState.value = _uiState.value?.copy(isWishlisted = false, isReadlisted = false)
             return
         }
-        _isCommentProcessing.value = true
-        viewModelScope.launch {
-            try {
-                Model.postsRepository.addComment(postId, text)
-                _actionFeedback.value = R.string.comment_added
-            } catch (e: Exception) {
-                _error.value = e.toUserFriendlyMessageRes(R.string.error_comment_add)
-            } finally {
-                _isCommentProcessing.value = false
+
+        wishlistSource = listsRepository.observeWishlistExists(userId, bookId).also { source ->
+            _uiState.addSource(source) { isWishlisted ->
+                _uiState.value = _uiState.value?.copy(isWishlisted = isWishlisted)
             }
         }
-    }
 
-    fun resetFeedback() {
-        _actionFeedback.value = null
+        readlistSource = listsRepository.observeReadlistExists(userId, bookId).also { source ->
+            _uiState.addSource(source) { isReadlisted ->
+                _uiState.value = _uiState.value?.copy(isReadlisted = isReadlisted)
+            }
+        }
     }
 
     private fun PostEntity.toBook(): Book {
@@ -180,4 +241,47 @@ class PostDetailsViewModel : ViewModel() {
             description = description
         )
     }
+
+    companion object {
+        fun factory(
+            postsRepository: PostsRepository,
+            booksRepository: BooksRepository,
+            listsRepository: ListsRepository,
+            authRepository: AuthRepository
+        ): ViewModelProvider.Factory {
+            return object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    if (modelClass.isAssignableFrom(PostDetailsViewModel::class.java)) {
+                        return PostDetailsViewModel(
+                            postsRepository = postsRepository,
+                            booksRepository = booksRepository,
+                            listsRepository = listsRepository,
+                            authRepository = authRepository
+                        ) as T
+                    }
+                    throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+                }
+            }
+        }
+    }
+}
+
+data class PostDetailsUiState(
+    val currentUserId: String? = null,
+    val post: PostEntity? = null,
+    val comments: List<CommentEntity> = emptyList(),
+    val bookInfo: BookInfoCardModel? = null,
+    val isContentLoading: Boolean = false,
+    val isActionProcessing: Boolean = false,
+    val isCommentProcessing: Boolean = false,
+    val isWishlisted: Boolean = false,
+    val isReadlisted: Boolean = false,
+    val canEdit: Boolean = false
+)
+
+sealed interface PostDetailsEvent {
+    data class NavigateToEdit(val postId: String) : PostDetailsEvent
+    data class CommentAdded(@StringRes val messageRes: Int) : PostDetailsEvent
+    data class ShowMessage(@StringRes val messageRes: Int) : PostDetailsEvent
 }
