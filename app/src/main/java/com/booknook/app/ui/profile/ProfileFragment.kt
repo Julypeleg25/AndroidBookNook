@@ -10,7 +10,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentProfileBinding
+import com.booknook.app.util.loadRemoteImage
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 
@@ -18,14 +20,17 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: ProfileViewModel by viewModels()
-    private var selectedAvatarUri: Uri? = null
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: ProfileViewModel by viewModels {
+        ProfileViewModel.factory(
+            profileRepository = app.profileRepository,
+            authRepository = app.authRepository
+        )
+    }
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
-            selectedAvatarUri = it
-            viewModel.inputAvatarUri.value = it
-            Picasso.get().load(it).fit().centerCrop().into(binding.avatarImage)
+            viewModel.onAvatarSelected(it)
         }
     }
 
@@ -36,7 +41,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         observeViewModel()
 
         binding.usernameInput.doOnTextChanged { text, _, _, _ ->
-            viewModel.inputUsername.value = text?.toString().orEmpty()
+            viewModel.onUsernameChanged(text?.toString().orEmpty())
         }
 
         binding.pickAvatarBtn.setOnClickListener {
@@ -44,61 +49,54 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
 
         binding.saveBtn.setOnClickListener {
-            val username = binding.usernameInput.text.toString().trim()
-            val user = viewModel.user.value
-            if (username.isNotEmpty() && user != null) {
-                viewModel.updateProfile(username, user.email, selectedAvatarUri)
-            } else if (username.isEmpty()) {
-                Snackbar.make(binding.root, getString(R.string.profile_required_error), Snackbar.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            viewModel.onSaveRequested()
         }
 
         binding.logoutBtn.setOnClickListener {
-            viewModel.logout()
-            findNavController().navigate(R.id.action_global_logout)
+            viewModel.onLogoutRequested()
         }
     }
 
     private fun observeViewModel() {
-        viewModel.user.observe(viewLifecycleOwner) { user ->
-            user?.let {
-                if (binding.usernameInput.text.isNullOrEmpty()) {
-                    binding.usernameInput.setText(it.username)
-                }
-                binding.emailInput.setText(it.email)
-                if (selectedAvatarUri == null && !it.avatarUrl.isNullOrBlank()) {
-                    Picasso.get()
-                        .load(it.avatarUrl)
-                        .placeholder(R.drawable.ic_launcher_foreground)
-                        .error(R.drawable.ic_launcher_foreground)
-                        .fit()
-                        .centerCrop()
-                        .into(binding.avatarImage)
-                }
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            if (binding.usernameInput.text?.toString() != state.draftUsername) {
+                binding.usernameInput.setText(state.draftUsername)
+                binding.usernameInput.setSelection(state.draftUsername.length)
             }
-        }
 
-        viewModel.isChanged.observe(viewLifecycleOwner) { isChanged ->
-            binding.saveBtn.isEnabled = isChanged && viewModel.loading.value != true
-        }
+            binding.emailInput.setText(state.user?.email.orEmpty())
 
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loading.isVisible = isLoading
-            binding.saveBtn.isEnabled = !isLoading && viewModel.isChanged.value == true
-        }
+            when {
+                state.selectedAvatarUri != null -> {
+                    Picasso.get().load(state.selectedAvatarUri).fit().centerCrop().into(binding.avatarImage)
+                }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
+                !state.user?.avatarUrl.isNullOrBlank() -> {
+                    binding.avatarImage.loadRemoteImage(
+                        state.user?.avatarUrl,
+                        R.drawable.ic_launcher_foreground
+                    )
+                }
+
+                else -> binding.avatarImage.setImageResource(R.drawable.ic_launcher_foreground)
             }
+
+            val isBusy = state.isSaving || state.isLoggingOut
+            binding.loading.isVisible = isBusy
+            binding.saveBtn.isEnabled = state.canSave && !isBusy
         }
 
-        viewModel.updateSuccess.observe(viewLifecycleOwner) { success ->
-            if (success) {
-                Snackbar.make(binding.root, R.string.profile_updated, Snackbar.LENGTH_SHORT).show()
-                viewModel.resetUpdateSuccess()
-                selectedAvatarUri = null
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    ProfileEvent.NavigateToLogin -> {
+                        findNavController().navigate(R.id.action_global_logout)
+                    }
+
+                    is ProfileEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
