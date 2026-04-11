@@ -9,7 +9,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentCreatePostBinding
+import com.booknook.app.util.loadRemoteImage
+import com.booknook.app.util.nullIfBlank
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
 
@@ -17,7 +20,13 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
 
     private var _binding: FragmentCreatePostBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: CreatePostViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: PostEditorViewModel by viewModels {
+        PostEditorViewModel.factory(
+            postsRepository = app.postsRepository,
+            authRepository = app.authRepository
+        )
+    }
     private var pickedImage: Uri? = null
     private lateinit var postId: String
     private var hasInitializedForm = false
@@ -43,6 +52,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         binding.imageRequiredHint.isVisible = false
 
         observeViewModel()
+        viewModel.loadPost(postId)
 
         binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
 
@@ -58,8 +68,12 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
     }
 
     private fun observeViewModel() {
-        viewModel.observePost(postId).observe(viewLifecycleOwner) { post ->
-            if (post == null) return@observe
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            val isBusy = state.isSaving || state.isLoadingPost
+            binding.loading.isVisible = isBusy
+            binding.publishBtn.isEnabled = !isBusy
+
+            val post = state.post ?: return@observe
 
             if (!hasInitializedForm) {
                 binding.ratingBar.rating = post.rating.toFloat()
@@ -80,29 +94,25 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
                 hasInitializedForm = true
             }
 
-            if (pickedImage == null && !post.imageUrl.isNullOrBlank()) {
+            val existingImageUrl = post.imageUrl.nullIfBlank()
+            if (pickedImage == null && existingImageUrl != null) {
                 binding.imageCard.isVisible = true
-                Picasso.get().load(post.imageUrl).fit().centerCrop().into(binding.imagePreview)
+                binding.imagePreview.loadRemoteImage(existingImageUrl, R.drawable.book_placeholder)
             }
         }
 
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loading.isVisible = isLoading
-            binding.publishBtn.isEnabled = !isLoading
-        }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is PostEditorEvent.Finish -> {
+                        Snackbar.make(binding.root, action.messageRes, Snackbar.LENGTH_SHORT).show()
+                        findNavController().popBackStack()
+                    }
 
-        viewModel.saveSuccess.observe(viewLifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let { success ->
-                if (success) {
-                    Snackbar.make(binding.root, R.string.create_post_update_success, Snackbar.LENGTH_SHORT).show()
-                    findNavController().popBackStack()
+                    is PostEditorEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
                 }
-            }
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
             }
         }
     }
