@@ -1,67 +1,99 @@
 package com.booknook.app.ui.auth
 
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.booknook.app.R
-import com.booknook.app.model.Model
+import com.booknook.app.data.repository.AuthRepository
 import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.launch
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
-    private val _loading = MutableLiveData(false)
-    val loading: LiveData<Boolean> = _loading
+    private val _uiState = MutableLiveData(AuthUiState())
+    val uiState: LiveData<AuthUiState> = _uiState
 
-    private val _error = MutableLiveData<Event<Int>>()
-    val error: LiveData<Event<Int>> = _error
-
-    private val _registrationSuccess = MutableLiveData<Event<Unit>>()
-    val registrationSuccess: LiveData<Event<Unit>> = _registrationSuccess
-
-    private val _loginSuccess = MutableLiveData<Event<Unit>>()
-    val loginSuccess: LiveData<Event<Unit>> = _loginSuccess
+    private val _event = MutableLiveData<Event<AuthEvent>>()
+    val event: LiveData<Event<AuthEvent>> = _event
 
     private var isProcessing = false
 
-    fun login(email: String, password: String) {
+    fun onLoginSubmitted(email: String, password: String) {
         if (isProcessing) return
-        
-        isProcessing = true
-        _loading.value = true
+
+        updateLoading(true)
         
         viewModelScope.launch {
             try {
-                Model.authRepository.login(email, password)
-                _loginSuccess.value = Event(Unit)
+                authRepository.login(email, password)
+                _event.value = Event(AuthEvent.NavigateToPosts(R.string.login_success_message))
             } catch (e: Exception) {
-                _error.value = Event(e.toUserFriendlyMessageRes(R.string.error_generic))
+                _event.value = Event(AuthEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_generic)))
             } finally {
-                _loading.value = false
-                isProcessing = false
+                updateLoading(false)
             }
         }
     }
 
-    fun register(email: String, password: String, username: String, avatarUri: Uri? = null) {
+    fun onRegisterSubmitted(email: String, password: String, username: String, avatarUri: Uri? = null) {
         if (isProcessing) return
 
-        isProcessing = true
-        _loading.value = true
+        updateLoading(true)
         
         viewModelScope.launch {
             try {
-                Model.authRepository.register(email, password, username, avatarUri)
-                _registrationSuccess.value = Event(Unit)
+                authRepository.register(email, password, username, avatarUri)
+                _event.value = Event(AuthEvent.NavigateToPosts(R.string.register_success_message))
             } catch (e: Exception) {
-                _error.value = Event(e.toUserFriendlyMessageRes(R.string.error_generic))
+                _event.value = Event(AuthEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_generic)))
             } finally {
-                _loading.value = false
-                isProcessing = false
+                updateLoading(false)
             }
         }
     }
+
+    fun onRegisterLinkClicked() {
+        _event.value = Event(AuthEvent.NavigateToRegister)
+    }
+
+    fun onBackToLoginClicked() {
+        _event.value = Event(AuthEvent.NavigateBackToLogin)
+    }
+
+    private fun updateLoading(isLoading: Boolean) {
+        isProcessing = isLoading
+        _uiState.value = _uiState.value?.copy(isLoading = isLoading)
+    }
+
+    companion object {
+        fun factory(authRepository: AuthRepository): ViewModelProvider.Factory {
+            return object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+                        return AuthViewModel(authRepository) as T
+                    }
+                    throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+                }
+            }
+        }
+    }
+}
+
+data class AuthUiState(
+    val isLoading: Boolean = false
+)
+
+sealed interface AuthEvent {
+    data object NavigateToRegister : AuthEvent
+    data object NavigateBackToLogin : AuthEvent
+    data class NavigateToPosts(@StringRes val messageRes: Int) : AuthEvent
+    data class ShowMessage(@StringRes val messageRes: Int) : AuthEvent
 }

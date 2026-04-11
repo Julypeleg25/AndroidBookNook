@@ -7,15 +7,18 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentLoginBinding
-import com.booknook.app.model.Model
 import com.google.android.material.snackbar.Snackbar
 
 class LoginFragment : Fragment(R.layout.fragment_login) {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: AuthViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: AuthViewModel by viewModels {
+        AuthViewModel.factory(app.authRepository)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -32,29 +35,37 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                 return@setOnClickListener
             }
 
-            viewModel.login(email, password)
+            viewModel.onLoginSubmitted(email, password)
         }
 
         binding.tvRegister.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
+            viewModel.onRegisterLinkClicked()
         }
     }
 
     private fun observeViewModel() {
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            setLoading(isLoading)
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            setLoading(state.isLoading)
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { event ->
+        viewModel.event.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { error ->
-                Snackbar.make(binding.root, getString(error), Snackbar.LENGTH_SHORT).show()
-            }
-        }
+                when (error) {
+                    AuthEvent.NavigateToRegister -> {
+                        findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
+                    }
 
-        viewModel.loginSuccess.observe(viewLifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let {
-                Snackbar.make(binding.root, R.string.login_success_message, Snackbar.LENGTH_SHORT).show()
-                navigateToPosts()
+                    AuthEvent.NavigateBackToLogin -> Unit
+
+                    is AuthEvent.NavigateToPosts -> {
+                        Snackbar.make(binding.root, error.messageRes, Snackbar.LENGTH_SHORT).show()
+                        navigateToPosts()
+                    }
+
+                    is AuthEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(error.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
