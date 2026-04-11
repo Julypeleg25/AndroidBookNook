@@ -1,14 +1,15 @@
 package com.booknook.app.data.repository
 
+import com.booknook.app.data.local.LocalCacheDataSource
 import com.booknook.app.data.local.entities.CachedBookEntity
-import com.booknook.app.domain.Book
+import com.booknook.app.model.Book
 import com.booknook.app.model.api.ApiModel
 import com.booknook.app.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class BooksRepository(
-    private val local: AppLocalRepository,
+    private val local: LocalCacheDataSource,
     private val api: ApiModel
 ) {
     suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> {

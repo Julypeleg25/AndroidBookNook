@@ -17,4 +17,18 @@ interface CommentDao {
 
     @Query("DELETE FROM comments WHERE postId = :postId")
     suspend fun deleteByPost(postId: String)
+
+    @Query("UPDATE comments SET username = :username, userAvatarUrl = :avatarUrl WHERE userId = :userId")
+    suspend fun updateAuthorProfile(userId: String, username: String, avatarUrl: String?)
+
+    @Query("DELETE FROM comments")
+    suspend fun deleteAll()
+
+    @Transaction
+    suspend fun replaceByPost(postId: String, comments: List<CommentEntity>) {
+        deleteByPost(postId)
+        if (comments.isNotEmpty()) {
+            insertAll(comments)
+        }
+    }
 }

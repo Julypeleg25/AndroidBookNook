@@ -11,7 +11,7 @@ import com.booknook.app.data.local.entities.*
 
 @Database(
     entities = [PostEntity::class, CommentEntity::class, WishlistEntity::class, ReadlistEntity::class, UserEntity::class, CachedBookEntity::class, LikeEntity::class],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,11 +33,30 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `feed_posts` (
+                        `postId` TEXT NOT NULL,
+                        PRIMARY KEY(`postId`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP TABLE IF EXISTS `feed_posts`")
+            }
+        }
+
         @Volatile private var INSTANCE: AppDatabase? = null
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "booknook.db")
-                    .addMigrations(MIGRATION_9_10)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .build()
                     .also { INSTANCE = it }
             }

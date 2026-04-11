@@ -6,8 +6,8 @@ import androidx.core.view.isVisible
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.ActivityMainBinding
-import com.booknook.app.model.Model
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -20,10 +20,10 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host) as NavHostFragment
         val navController = navHostFragment.navController
 
-        
         val navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
+        val app = application as MyApplication
         navGraph.setStartDestination(
-            if (Model.authRepository.currentUserId() != null) R.id.postsFragment else R.id.loginFragment
+            if (app.authRepository.isLoggedIn()) R.id.postsFragment else R.id.loginFragment
         )
         navController.graph = navGraph
 

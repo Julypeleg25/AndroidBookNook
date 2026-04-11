@@ -1,6 +1,6 @@
 package com.booknook.app.model.api
 
-import com.booknook.app.domain.Book
+import com.booknook.app.model.Book
 import com.booknook.app.model.api.dto.BookDto
 import com.booknook.app.model.api.dto.SearchResponseDto
 import retrofit2.Retrofit
