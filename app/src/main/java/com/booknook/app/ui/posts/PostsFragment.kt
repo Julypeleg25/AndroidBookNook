@@ -10,6 +10,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentPostsBinding
 import com.google.android.material.snackbar.Snackbar
 
@@ -17,21 +18,19 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
 
     private var _binding: FragmentPostsBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: PostsViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: PostsViewModel by viewModels {
+        PostsViewModel.factory(
+            postsRepository = app.postsRepository,
+            authRepository = app.authRepository
+        )
+    }
 
     private val adapter by lazy { PostsAdapter(
         currentUserId = viewModel.currentUserId,
-        onClick = { postId ->
-            val action = PostsFragmentDirections.actionPostsToDetails(postId)
-            findNavController().navigate(action)
-        },
-        onLike = { postId ->
-            viewModel.toggleLike(postId)
-        },
-        onEdit = { postId ->
-            val action = PostsFragmentDirections.actionPostsToEdit(postId)
-            findNavController().navigate(action)
-        },
+        onClick = viewModel::onPostSelected,
+        onLike = viewModel::onLikeClicked,
+        onEdit = viewModel::onEditRequested,
         onDelete = { postId ->
             showDeleteConfirmation(postId)
         }
@@ -43,7 +42,7 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
             .setMessage(R.string.delete_post_message)
             .setNegativeButton(R.string.action_cancel, null)
             .setPositiveButton(R.string.delete_post_confirm) { _, _ ->
-                viewModel.deletePost(postId)
+                viewModel.onDeleteConfirmed(postId)
             }
             .show()
     }
@@ -69,49 +68,56 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
                     val totalItemCount = layoutManager.itemCount
                     val firstVisible = layoutManager.findFirstVisibleItemPosition()
                     if ((visibleItemCount + firstVisible) >= totalItemCount && firstVisible >= 0) {
-                        viewModel.loadMore()
+                        viewModel.onLoadMoreRequested()
                     }
                 }
             }
         })
 
         binding.searchInput.doAfterTextChanged { text ->
-            viewModel.filterPosts(text?.toString()?.trim().orEmpty())
+            viewModel.onSearchQueryChanged(text?.toString().orEmpty())
         }
 
         observeViewModel()
     }
 
     private fun observeViewModel() {
-        viewModel.posts.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
-            binding.emptyText.isVisible = list.isEmpty()
-        }
-
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.pbLoading.isVisible = isLoading
-            if (!isLoading) binding.swipeRefresh.isRefreshing = false
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            if (binding.searchInput.text?.toString() != state.query) {
+                binding.searchInput.setText(state.query)
+                binding.searchInput.setSelection(state.query.length)
             }
+
+            adapter.submitList(state.posts)
+            binding.emptyText.isVisible = state.isEmpty
+            binding.pbLoading.isVisible = state.isInitialLoading
+            binding.swipeRefresh.isRefreshing = state.isRefreshing
+            binding.pbLoadingMore.isVisible = state.isLoadingMore
         }
 
-        viewModel.loadingMore.observe(viewLifecycleOwner) { isLoadingMore ->
-            binding.pbLoadingMore.isVisible = isLoadingMore
-        }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is PostsEvent.NavigateToDetails -> {
+                        val direction = PostsFragmentDirections.actionPostsToDetails(action.postId)
+                        findNavController().navigate(direction)
+                    }
 
-        viewModel.deleteSuccess.observe(viewLifecycleOwner) { success ->
-            if (success) {
-                Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
-                viewModel.resetDeleteSuccess()
+                    is PostsEvent.NavigateToEdit -> {
+                        val direction = PostsFragmentDirections.actionPostsToEdit(action.postId)
+                        findNavController().navigate(direction)
+                    }
+
+                    is PostsEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
 
     override fun onDestroyView() {
+        binding.recyclerView.adapter = null
         super.onDestroyView()
         _binding = null
     }

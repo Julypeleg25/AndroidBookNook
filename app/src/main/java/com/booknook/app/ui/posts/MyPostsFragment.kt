@@ -8,32 +8,28 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentMyPostsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
 
     private var _binding: FragmentMyPostsBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: MyPostsViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: MyPostsViewModel by viewModels {
+        MyPostsViewModel.factory(
+            postsRepository = app.postsRepository,
+            authRepository = app.authRepository
+        )
+    }
 
     private val adapter by lazy { PostsAdapter(
         currentUserId = viewModel.currentUserId,
-        onClick = { postId ->
-            val action = MyPostsFragmentDirections.actionMyPostsToDetails(postId)
-            findNavController().navigate(action)
-        },
-        onLike = { postId ->
-            viewModel.toggleLike(postId)
-        },
-        onEdit = { postId ->
-            val action = MyPostsFragmentDirections.actionMyPostsToEdit(postId)
-            findNavController().navigate(action)
-        },
+        onClick = viewModel::onPostSelected,
+        onLike = viewModel::onLikeClicked,
+        onEdit = viewModel::onEditRequested,
         onDelete = { postId ->
             showDeleteConfirmation(postId)
         }
@@ -60,38 +56,43 @@ class MyPostsFragment : Fragment(R.layout.fragment_my_posts) {
             .setMessage(R.string.delete_post_message)
             .setNegativeButton(R.string.action_cancel, null)
             .setPositiveButton(R.string.delete_post_confirm) { _, _ ->
-                viewModel.deletePost(postId)
+                viewModel.onDeleteConfirmed(postId)
             }
             .show()
     }
 
     private fun observeViewModel() {
-        viewModel.observeMyPosts().observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
-            binding.emptyState.isVisible = list.isEmpty()
-            binding.recyclerView.isVisible = list.isNotEmpty()
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            adapter.submitList(state.posts)
+            binding.emptyState.isVisible = state.isEmpty
+            binding.recyclerView.isVisible = state.posts.isNotEmpty()
+            binding.pbLoading.isVisible = state.isInitialLoading
+            binding.swipeRefresh.isRefreshing = state.isRefreshing
         }
 
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.pbLoading.isVisible = isLoading
-            if (!isLoading) binding.swipeRefresh.isRefreshing = false
-        }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is MyPostsEvent.NavigateToDetails -> {
+                        val direction = MyPostsFragmentDirections.actionMyPostsToDetails(action.postId)
+                        findNavController().navigate(direction)
+                    }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, getString(it), Snackbar.LENGTH_SHORT).show()
-            }
-        }
+                    is MyPostsEvent.NavigateToEdit -> {
+                        val direction = MyPostsFragmentDirections.actionMyPostsToEdit(action.postId)
+                        findNavController().navigate(direction)
+                    }
 
-        viewModel.deleteSuccess.observe(viewLifecycleOwner) { success ->
-            if (success) {
-                Snackbar.make(binding.root, R.string.post_deleted, Snackbar.LENGTH_SHORT).show()
-                viewModel.resetDeleteSuccess()
+                    is MyPostsEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
 
     override fun onDestroyView() {
+        binding.recyclerView.adapter = null
         super.onDestroyView()
         _binding = null
     }
