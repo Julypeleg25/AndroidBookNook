@@ -5,15 +5,15 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "readlist")
 data class ReadlistEntity(
-    @PrimaryKey val key: String,
-    val userId: String,
-    val bookId: String,
-    val title: String,
-    val author: String,
-    val thumbnail: String?,
-    val addedAt: Long,
-    val genre: String? = null,
-    val publishedDate: String? = null,
-    val pageCount: Int? = null,
-    val description: String? = null
-)
+    @PrimaryKey override val key: String,
+    override val userId: String,
+    override val bookId: String,
+    override val title: String,
+    override val author: String,
+    override val thumbnail: String?,
+    override val addedAt: Long,
+    override val genre: String? = null,
+    override val publishedDate: String? = null,
+    override val pageCount: Int? = null,
+    override val description: String? = null
+) : SavedBookListItem

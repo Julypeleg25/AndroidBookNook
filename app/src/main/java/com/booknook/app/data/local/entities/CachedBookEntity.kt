@@ -9,5 +9,9 @@ data class CachedBookEntity(
     val title: String,
     val author: String,
     val thumbnail: String?,
+    val publishedDate: String?,
+    val genre: String?,
+    val pageCount: Int?,
+    val description: String?,
     val lastFetchedAt: Long
 )
