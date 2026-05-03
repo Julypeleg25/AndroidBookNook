@@ -1,6 +1,6 @@
 package com.booknook.app.model.api
 
-import com.booknook.app.domain.Book
+import com.booknook.app.model.Book
 import com.booknook.app.model.api.dto.BookDto
 import com.booknook.app.model.api.dto.SearchResponseDto
 import retrofit2.Retrofit
@@ -41,31 +41,16 @@ class ApiModel {
         val q = query.lowercase().trim()
         if (q.isBlank()) return emptyList()
 
-        
-        val refinedQuery = "intitle:\"$q\" OR inauthor:\"$q\""
-        
+        val refinedQuery = q
         com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $refinedQuery (startIndex: $startIndex)")
-        val res = try {
-            api.search(refinedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
-        } catch (e: Exception) {
-            com.booknook.app.util.Logger.e("GoogleBooks", "Search failed for $refinedQuery", e)
-            return emptyList()
-        }
-
+        val res = api.search(refinedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
         val items = res.items ?: return emptyList()
-
         return items.map { dto -> dto.toDomainBook() }
     }
 
     suspend fun getBook(volumeId: String): Book? {
         if (volumeId.isBlank()) return null
-
-        return try {
-            api.getVolume(volumeId).toDomainBook()
-        } catch (e: Exception) {
-            com.booknook.app.util.Logger.e("GoogleBooks", "Fetch by id failed for $volumeId", e)
-            null
-        }
+        return api.getVolume(volumeId).toDomainBook()
     }
 }
 
