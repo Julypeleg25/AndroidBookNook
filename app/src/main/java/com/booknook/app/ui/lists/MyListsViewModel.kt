@@ -13,7 +13,6 @@ import com.booknook.app.data.repository.AuthRepository
 import com.booknook.app.data.repository.ListsRepository
 import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class MyListsViewModel(
@@ -28,15 +27,14 @@ class MyListsViewModel(
 
     private val _event = MutableLiveData<Event<MyListsEvent>>()
     val event: LiveData<Event<MyListsEvent>> = _event
-    private var wishlistSource: LiveData<List<SavedBookListItem>>? = null
-    private var readlistSource: LiveData<List<SavedBookListItem>>? = null
+    private var wishlistSource: LiveData<out List<SavedBookListItem>>? = null
+    private var readlistSource: LiveData<out List<SavedBookListItem>>? = null
 
     init {
         bindCurrentUser(currentUserId)
 
         viewModelScope.launch {
             authRepository.authState
-                .distinctUntilChanged()
                 .collect { userId ->
                     if (userId == currentUserId) return@collect
                     currentUserId = userId

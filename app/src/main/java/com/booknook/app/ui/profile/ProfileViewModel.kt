@@ -14,7 +14,6 @@ import com.booknook.app.data.repository.ProfileRepository
 import com.booknook.app.data.local.entities.UserEntity
 import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
@@ -60,7 +59,6 @@ class ProfileViewModel(
 
         viewModelScope.launch {
             authRepository.authState
-                .distinctUntilChanged()
                 .collect { userId ->
                     if (userId == currentUserId) return@collect
                     currentUserId = userId

@@ -17,7 +17,6 @@ import com.booknook.app.data.repository.PostsRepository
 import com.booknook.app.model.Book
 import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class PostDetailsViewModel(
@@ -51,7 +50,6 @@ class PostDetailsViewModel(
 
         viewModelScope.launch {
             authRepository.authState
-                .distinctUntilChanged()
                 .collect { userId ->
                     if (userId == currentUserId) return@collect
                     currentUserId = userId
