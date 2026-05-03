@@ -34,41 +34,22 @@ class PostsRepository(
         return local.observePost(postId, currentUserId)
     }
 
-    suspend fun getPost(postId: String, currentUserId: String): PostEntity? {
-        return local.getPost(postId, currentUserId)
-    }
-
     fun searchPostsByQuery(query: String, currentUserId: String): LiveData<List<PostEntity>> {
         return local.searchPostsByQuery(query, currentUserId)
     }
 
-    suspend fun isOwnPost(postId: String, currentUserId: String): Boolean {
-        val post = withContext(Dispatchers.IO) { local.getPost(postId, currentUserId) }
-        return post?.userId == currentUserId
-    }
-
     suspend fun refreshPosts(force: Boolean = false): PostsPageResult {
         val now = System.currentTimeMillis()
-        if (!force && now - lastRefreshTime < REFRESH_INTERVAL) {
+        if (shouldSkipRefresh(force, now)) {
             return PostsPageResult(endReached = !canLoadMorePosts)
         }
 
         resetPagination()
         val currentUserId = firebase.currentUserId()
-        val (posts, newLastDoc) = firebase.fetchPostsPage(PAGE_SIZE, null)
+        val page = firebase.fetchPostsPage(PAGE_SIZE, null)
 
-        lastDocument = newLastDoc
-        canLoadMorePosts = posts.size.toLong() >= PAGE_SIZE
-
-        withContext(Dispatchers.IO) {
-            local.upsertPosts(posts)
-            if (currentUserId != null) {
-                val likes = posts.filter { it.isLikedByUser }.map {
-                    LikeEntity(userId = currentUserId, postId = it.id)
-                }
-                local.replaceUserLikes(currentUserId, likes)
-            }
-        }
+        updatePagination(page)
+        cachePostsPage(page.posts, currentUserId, replaceUserLikes = true)
         lastRefreshTime = now
         return PostsPageResult(endReached = !canLoadMorePosts)
     }
@@ -85,31 +66,8 @@ class PostsRepository(
         val userId = firebase.requireUserId()
         val username = firebase.fetchProfile()?.username ?: DEFAULT_USERNAME
         val postId = UUID.randomUUID().toString()
-        val imageUrl = imageUri?.let { storageModel.uploadPostImage(userId, postId, it)?.nullIfBlank() }
-        if (imageUri != null && imageUrl == null) {
-            throw IllegalStateException("Photo upload failed")
-        }
-        val now = System.currentTimeMillis()
-
-        val post = PostEntity(
-            id = postId,
-            userId = userId,
-            username = username,
-            bookId = book.id,
-            bookTitle = book.title,
-            bookAuthor = book.author,
-            bookThumbnail = book.thumbnail,
-            rating = rating,
-            review = review,
-            imageUrl = imageUrl,
-            createdAt = now,
-            likesCount = 0,
-            commentsCount = 0,
-            bookPublishedDate = book.publishedDate,
-            bookGenre = book.genre,
-            bookPageCount = book.pageCount,
-            bookDescription = book.description
-        )
+        val imageUrl = uploadPostImage(userId, postId, imageUri)
+        val post = buildNewPost(postId, userId, username, book, rating, review, imageUrl)
 
         firebase.createPost(post)
         withContext(Dispatchers.IO) {
@@ -122,11 +80,7 @@ class PostsRepository(
         val existing = firebase.getPost(postId) ?: return
         if (existing.userId != userId) return
 
-        val uploadedImageUrl = imageUri?.let { storageModel.uploadPostImage(userId, postId, it)?.nullIfBlank() }
-        if (imageUri != null && uploadedImageUrl == null) {
-            throw IllegalStateException("Photo upload failed")
-        }
-
+        val uploadedImageUrl = uploadPostImage(userId, postId, imageUri)
         val imageUrl = uploadedImageUrl ?: existing.imageUrl.nullIfBlank()
         val updated = existing.copy(rating = rating, review = review, imageUrl = imageUrl)
         firebase.updatePost(updated)
@@ -152,32 +106,19 @@ class PostsRepository(
 
         val isLiked = withContext(Dispatchers.IO) { local.isLikedSync(userId, postId) }
         val newIsLiked = !isLiked
-        val newCount = if (newIsLiked) post.likesCount + 1 else (post.likesCount - 1).coerceAtLeast(0)
+        val optimisticPost = post.withOptimisticLikeCount(newIsLiked)
 
         withContext(Dispatchers.IO) {
-            if (newIsLiked) {
-                local.upsertLike(LikeEntity(userId, postId))
-            } else {
-                local.deleteLike(userId, postId)
-            }
-            local.upsertPost(post.copy(likesCount = newCount))
+            updateCachedLike(userId, postId, newIsLiked)
+            local.upsertPost(optimisticPost)
         }
 
         try {
             firebase.toggleLike(postId)
-            val fresh = firebase.getPost(postId)
-            if (fresh != null) {
-                withContext(Dispatchers.IO) {
-                    local.upsertPost(fresh)
-                }
-            }
+            refreshCachedPost(postId)
         } catch (e: Exception) {
             withContext(Dispatchers.IO) {
-                if (isLiked) {
-                    local.upsertLike(LikeEntity(userId, postId))
-                } else {
-                    local.deleteLike(userId, postId)
-                }
+                updateCachedLike(userId, postId, isLiked)
                 local.upsertPost(post)
             }
             throw e
@@ -204,12 +145,7 @@ class PostsRepository(
 
         try {
             firebase.addComment(postId, text)
-            val fresh = firebase.getPost(postId)
-            if (fresh != null) {
-                withContext(Dispatchers.IO) {
-                    local.upsertPost(fresh)
-                }
-            }
+            refreshCachedPost(postId)
             refreshComments(postId)
         } catch (e: Exception) {
             withContext(Dispatchers.IO) {
@@ -224,25 +160,110 @@ class PostsRepository(
             return PostsPageResult(endReached = true)
         }
         val currentUserId = firebase.currentUserId()
-        val (posts, newLastDoc) = firebase.fetchPostsPage(PAGE_SIZE, lastDocument)
-        if (posts.isEmpty()) {
+        val page = firebase.fetchPostsPage(PAGE_SIZE, lastDocument)
+        if (page.posts.isEmpty()) {
             canLoadMorePosts = false
             return PostsPageResult(endReached = true)
         }
-        lastDocument = newLastDoc
-        withContext(Dispatchers.IO) {
-            local.upsertPosts(posts)
-            if (currentUserId != null) {
-                val likes = posts.filter { it.isLikedByUser }.map {
-                    LikeEntity(userId = currentUserId, postId = it.id)
-                }
-                if (likes.isNotEmpty()) {
-                    local.upsertLikes(likes)
-                }
-            }
-        }
-        canLoadMorePosts = posts.size.toLong() >= PAGE_SIZE
+        updatePagination(page)
+        cachePostsPage(page.posts, currentUserId, replaceUserLikes = false)
         return PostsPageResult(endReached = !canLoadMorePosts)
+    }
+
+    private fun shouldSkipRefresh(force: Boolean, now: Long): Boolean {
+        return !force && now - lastRefreshTime < REFRESH_INTERVAL
+    }
+
+    private fun updatePagination(page: Pair<List<PostEntity>, DocumentSnapshot?>) {
+        lastDocument = page.second
+        canLoadMorePosts = page.posts.size.toLong() >= PAGE_SIZE
+    }
+
+    private suspend fun cachePostsPage(
+        posts: List<PostEntity>,
+        currentUserId: String?,
+        replaceUserLikes: Boolean
+    ) = withContext(Dispatchers.IO) {
+        local.upsertPosts(posts)
+        cacheLikedPosts(posts, currentUserId, replaceUserLikes)
+    }
+
+    private suspend fun cacheLikedPosts(
+        posts: List<PostEntity>,
+        currentUserId: String?,
+        replaceUserLikes: Boolean
+    ) {
+        currentUserId ?: return
+        val likes = posts.toLikeEntities(currentUserId)
+        if (replaceUserLikes) {
+            local.replaceUserLikes(currentUserId, likes)
+        } else if (likes.isNotEmpty()) {
+            local.upsertLikes(likes)
+        }
+    }
+
+    private fun List<PostEntity>.toLikeEntities(userId: String): List<LikeEntity> {
+        return filter { it.isLikedByUser }.map { post ->
+            LikeEntity(userId = userId, postId = post.id)
+        }
+    }
+
+    private suspend fun uploadPostImage(userId: String, postId: String, imageUri: Uri?): String? {
+        val imageUrl = imageUri?.let { storageModel.uploadPostImage(userId, postId, it)?.nullIfBlank() }
+        if (imageUri != null && imageUrl == null) {
+            throw IllegalStateException("Photo upload failed")
+        }
+        return imageUrl
+    }
+
+    private fun buildNewPost(
+        postId: String,
+        userId: String,
+        username: String,
+        book: Book,
+        rating: Int,
+        review: String,
+        imageUrl: String?
+    ): PostEntity {
+        return PostEntity(
+            id = postId,
+            userId = userId,
+            username = username,
+            bookId = book.id,
+            bookTitle = book.title,
+            bookAuthor = book.author,
+            bookThumbnail = book.thumbnail,
+            rating = rating,
+            review = review,
+            imageUrl = imageUrl,
+            createdAt = System.currentTimeMillis(),
+            likesCount = 0,
+            commentsCount = 0,
+            bookPublishedDate = book.publishedDate,
+            bookGenre = book.genre,
+            bookPageCount = book.pageCount,
+            bookDescription = book.description
+        )
+    }
+
+    private fun PostEntity.withOptimisticLikeCount(isLiked: Boolean): PostEntity {
+        val likesCount = if (isLiked) likesCount + 1 else (likesCount - 1).coerceAtLeast(0)
+        return copy(likesCount = likesCount)
+    }
+
+    private suspend fun updateCachedLike(userId: String, postId: String, isLiked: Boolean) {
+        if (isLiked) {
+            local.upsertLike(LikeEntity(userId, postId))
+        } else {
+            local.deleteLike(userId, postId)
+        }
+    }
+
+    private suspend fun refreshCachedPost(postId: String) {
+        val freshPost = firebase.getPost(postId) ?: return
+        withContext(Dispatchers.IO) {
+            local.upsertPost(freshPost)
+        }
     }
 
     private fun resetPagination() {
@@ -260,3 +281,6 @@ class PostsRepository(
 data class PostsPageResult(
     val endReached: Boolean
 )
+
+private val Pair<List<PostEntity>, DocumentSnapshot?>.posts: List<PostEntity>
+    get() = first

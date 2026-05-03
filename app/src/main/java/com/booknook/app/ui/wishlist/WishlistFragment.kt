@@ -7,15 +7,21 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentWishlistBinding
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
     private var _binding: FragmentWishlistBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: WishlistViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: WishlistViewModel by viewModels {
+        WishlistViewModel.factory(
+            listsRepository = app.listsRepository,
+            authRepository = app.authRepository
+        )
+    }
     private lateinit var wishlistAdapter: WishlistAdapter
     private lateinit var readlistAdapter: ReadlistAdapter
 
@@ -58,7 +64,7 @@ class WishlistFragment : Fragment(R.layout.fragment_wishlist) {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
     }

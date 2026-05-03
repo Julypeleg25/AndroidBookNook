@@ -1,6 +1,8 @@
 package com.booknook.app.ui.posts
 
+import android.content.Context
 import android.text.TextUtils
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
@@ -20,89 +22,150 @@ data class BookInfoCardModel(
 
 object BookInfoCardBinder {
     private const val COLLAPSED_DESCRIPTION_LINES = 4
+    private const val META_SEPARATOR = "  |  "
 
     fun bind(binding: ViewBookInfoPanelBinding, model: BookInfoCardModel) {
-        val context = binding.root.context
-        val primaryTextColor = ContextCompat.getColor(context, R.color.bn_brown_text)
-        val secondaryTextColor = ContextCompat.getColor(context, R.color.bn_secondary_text)
+        val textColors = BookInfoTextColors.from(binding.root.context)
+        bindHeader(binding, model)
+        bindGenre(binding, model.genre)
+        bindMeta(binding, model, textColors)
+        bindDescription(binding, model.description, textColors)
+    }
 
+    private fun bindHeader(binding: ViewBookInfoPanelBinding, model: BookInfoCardModel) {
         binding.bookTitle.text = model.title
         binding.bookAuthor.text = model.author
-
         binding.bookThumb.loadRemoteImage(model.thumbnail, R.drawable.book_placeholder)
+    }
 
-        val genre = model.genre?.trim().orEmpty()
+    private fun bindGenre(binding: ViewBookInfoPanelBinding, rawGenre: String?) {
+        val genre = rawGenre?.trim().orEmpty()
         binding.bookGenre.isVisible = genre.isNotEmpty()
         if (genre.isNotEmpty()) {
             binding.bookGenre.text = genre
         }
+    }
 
-        val metaParts = buildList {
-            if (!model.publishedDate.isNullOrBlank()) {
-                add(context.getString(R.string.book_meta_published_format, model.publishedDate))
-            }
-            if (model.pageCount != null && model.pageCount > 0) {
-                add(context.resources.getQuantityString(R.plurals.book_pages, model.pageCount, model.pageCount))
-            }
-        }
-
+    private fun bindMeta(
+        binding: ViewBookInfoPanelBinding,
+        model: BookInfoCardModel,
+        textColors: BookInfoTextColors
+    ) {
+        val context = binding.root.context
+        val metaParts = model.buildMetaParts(context)
         val hasMeta = metaParts.isNotEmpty()
         binding.bookMeta.text = if (hasMeta) {
-            metaParts.joinToString("  •  ")
+            metaParts.joinToString(META_SEPARATOR)
         } else {
             context.getString(R.string.book_meta_missing)
         }
-        binding.bookMeta.setTextColor(if (hasMeta) primaryTextColor else secondaryTextColor)
+        binding.bookMeta.setTextColor(textColors.forContent(hasMeta))
+    }
 
-        val rawDescription = model.description?.trim().orEmpty()
-        val description = HtmlCompat.fromHtml(
-            rawDescription,
-            HtmlCompat.FROM_HTML_MODE_LEGACY
-        ).toString().trim()
+    private fun bindDescription(
+        binding: ViewBookInfoPanelBinding,
+        rawDescription: String?,
+        textColors: BookInfoTextColors
+    ) {
+        val context = binding.root.context
+        val description = rawDescription.toPlainDescription()
         val hasDescription = description.isNotEmpty()
-        binding.bookDescription.text = if (hasDescription) description else context.getString(R.string.book_description_missing)
-        binding.bookDescription.setTextColor(if (hasDescription) primaryTextColor else secondaryTextColor)
 
-        val previousDescription = binding.bookDescription.tag as? String
-        var isDescriptionExpanded = binding.bookDescriptionToggle.tag as? Boolean ?: false
-        if (previousDescription != description) {
-            isDescriptionExpanded = false
+        binding.bookDescription.text = if (hasDescription) {
+            description
+        } else {
+            context.getString(R.string.book_description_missing)
         }
+        binding.bookDescription.setTextColor(textColors.forContent(hasDescription))
+        bindDescriptionToggle(binding, description, hasDescription)
+    }
+
+    private fun bindDescriptionToggle(
+        binding: ViewBookInfoPanelBinding,
+        description: String,
+        hasDescription: Boolean
+    ) {
+        var isExpanded = binding.bookDescriptionToggle.tag as? Boolean ?: false
+        if (binding.bookDescription.tag as? String != description) {
+            isExpanded = false
+        }
+
         binding.bookDescription.tag = description
-
-        fun updateDescriptionState() {
-            binding.bookDescription.maxLines = if (isDescriptionExpanded) {
-                Int.MAX_VALUE
-            } else {
-                COLLAPSED_DESCRIPTION_LINES
-            }
-            binding.bookDescription.ellipsize = if (isDescriptionExpanded) null else TextUtils.TruncateAt.END
-            binding.bookDescriptionToggle.text = context.getString(
-                if (isDescriptionExpanded) R.string.book_description_collapse else R.string.book_description_expand
-            )
-            binding.bookDescriptionToggle.tag = isDescriptionExpanded
-        }
-
         binding.bookDescription.maxLines = COLLAPSED_DESCRIPTION_LINES
         binding.bookDescriptionToggle.isVisible = false
         binding.bookDescriptionToggle.setOnClickListener {
-            isDescriptionExpanded = !isDescriptionExpanded
-            updateDescriptionState()
+            isExpanded = !isExpanded
+            updateDescriptionState(binding, isExpanded)
         }
 
         binding.bookDescription.post {
-            val layout = binding.bookDescription.layout
-            val isEllipsized = layout != null && (0 until layout.lineCount).any { lineIndex ->
-                layout.getEllipsisCount(lineIndex) > 0
-            }
-            val shouldShowToggle = hasDescription && (
-                binding.bookDescription.lineCount > COLLAPSED_DESCRIPTION_LINES || isEllipsized
-            )
+            val shouldShowToggle = hasDescription && binding.bookDescription.isCollapsible()
             binding.bookDescriptionToggle.isVisible = shouldShowToggle
             if (!shouldShowToggle) {
-                isDescriptionExpanded = false
+                isExpanded = false
             }
-            updateDescriptionState()
+            updateDescriptionState(binding, isExpanded)
+        }
+    }
+
+    private fun updateDescriptionState(
+        binding: ViewBookInfoPanelBinding,
+        isExpanded: Boolean
+    ) {
+        binding.bookDescription.maxLines = if (isExpanded) {
+            Int.MAX_VALUE
+        } else {
+            COLLAPSED_DESCRIPTION_LINES
+        }
+        binding.bookDescription.ellipsize = if (isExpanded) null else TextUtils.TruncateAt.END
+        binding.bookDescriptionToggle.text = binding.root.context.getString(
+            if (isExpanded) R.string.book_description_collapse else R.string.book_description_expand
+        )
+        binding.bookDescriptionToggle.tag = isExpanded
+    }
+
+    private fun BookInfoCardModel.buildMetaParts(context: Context): List<String> {
+        return buildList {
+            if (!publishedDate.isNullOrBlank()) {
+                add(context.getString(R.string.book_meta_published_format, publishedDate))
+            }
+            if (pageCount != null && pageCount > 0) {
+                add(context.resources.getQuantityString(R.plurals.book_pages, pageCount, pageCount))
+            }
+        }
+    }
+
+    private fun String?.toPlainDescription(): String {
+        return HtmlCompat.fromHtml(
+            this?.trim().orEmpty(),
+            HtmlCompat.FROM_HTML_MODE_LEGACY
+        ).toString().trim()
+    }
+
+    private fun TextView.isCollapsible(): Boolean {
+        return lineCount > COLLAPSED_DESCRIPTION_LINES || hasEllipsizedLine()
+    }
+
+    private fun TextView.hasEllipsizedLine(): Boolean {
+        val currentLayout = layout ?: return false
+        return (0 until currentLayout.lineCount).any { lineIndex ->
+            currentLayout.getEllipsisCount(lineIndex) > 0
+        }
+    }
+
+    private data class BookInfoTextColors(
+        val primary: Int,
+        val secondary: Int
+    ) {
+        fun forContent(hasContent: Boolean): Int = if (hasContent) primary else secondary
+
+        companion object {
+            fun from(context: Context): BookInfoTextColors {
+                return BookInfoTextColors(
+                    primary = ContextCompat.getColor(context, R.color.bn_brown_text),
+                    secondary = ContextCompat.getColor(context, R.color.bn_secondary_text)
+                )
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ interface LikeDao {
     suspend fun exists(userId: String, postId: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(like: com.booknook.app.data.local.entities.LikeEntity)
+    suspend fun insert(like: LikeEntity)
 
     @Query("DELETE FROM likes WHERE userId = :userId AND postId = :postId")
     suspend fun delete(userId: String, postId: String)
