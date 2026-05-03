@@ -1,4 +1,4 @@
-package com.colman.booknook
+package com.booknook.app
 
 import org.junit.Test
 
