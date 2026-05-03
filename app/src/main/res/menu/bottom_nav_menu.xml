@@ -2,22 +2,22 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/postsFragment"
-        android:icon="@android:drawable/ic_menu_agenda"
+        android:icon="@drawable/ic_nav_feed"
         android:title="@string/nav_feed" />
     <item
         android:id="@+id/myPostsFragment"
-        android:icon="@android:drawable/ic_menu_my_calendar"
+        android:icon="@drawable/ic_nav_my_posts"
         android:title="@string/nav_my_posts" />
     <item
         android:id="@+id/bookSearchFragment"
-        android:icon="@android:drawable/ic_input_add"
+        android:icon="@drawable/ic_nav_new"
         android:title="@string/nav_new" />
     <item
-        android:id="@+id/wishlistFragment"
-        android:icon="@android:drawable/btn_star_big_on"
+        android:id="@+id/myListsFragment"
+        android:icon="@drawable/ic_nav_lists"
         android:title="@string/nav_my_lists" />
     <item
         android:id="@+id/profileFragment"
-        android:icon="@android:drawable/ic_menu_view"
+        android:icon="@drawable/ic_nav_profile"
         android:title="@string/nav_profile" />
 </menu>
