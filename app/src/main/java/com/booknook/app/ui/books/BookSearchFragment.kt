@@ -11,29 +11,22 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentBookSearchBinding
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
     private var _binding: FragmentBookSearchBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: BookSearchViewModel by viewModels()
-    private var hasSearched = false
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: BookSearchViewModel by viewModels {
+        BookSearchViewModel.factory(app.booksRepository)
+    }
+
 
     private val adapter = BookAdapter { book ->
-        val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
-            bookId = book.id,
-            bookTitle = book.title,
-            bookAuthor = book.author,
-            bookThumbnail = book.thumbnail,
-            bookPublishedDate = book.publishedDate,
-            bookGenre = book.genre,
-            bookPageCount = book.pageCount ?: -1,
-            bookDescription = book.description
-        )
-        findNavController().navigate(action)
+        viewModel.onBookSelected(book)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -44,7 +37,6 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         binding.recycler.layoutManager = layoutManager
         binding.recycler.adapter = adapter
 
-        
         binding.recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
@@ -60,82 +52,66 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         })
 
         observeViewModel()
-        binding.doSearchBtn.setOnClickListener { performSearch() }
-        binding.clearSearchBtn.setOnClickListener { clearSearchUi() }
+        binding.doSearchBtn.setOnClickListener { viewModel.onSearchRequested() }
+        binding.clearSearchBtn.setOnClickListener { viewModel.clearSearch() }
 
         binding.queryInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                performSearch()
+                viewModel.onSearchRequested()
                 true
             } else false
         }
 
         binding.queryInput.doAfterTextChanged { text ->
-            val hasText = !text.isNullOrBlank()
-            binding.clearSearchBtn.isVisible = hasText || hasSearched
-            if (!hasText && hasSearched) {
-                clearSearchUi()
-            }
-        }
-    }
-
-    private fun performSearch() {
-        val q = binding.queryInput.text.toString().trim()
-        if (q.isNotEmpty()) {
-            hasSearched = true
-            binding.welcomeGroup.isVisible = false
-            viewModel.searchBooks(q)
-        } else {
-            Snackbar.make(binding.root, "Enter a search query".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+            viewModel.onQueryChanged(text?.toString().orEmpty())
         }
     }
 
     private fun observeViewModel() {
-        viewModel.searchResults.observe(viewLifecycleOwner) { books ->
-            adapter.submitList(books)
-            binding.recycler.isVisible = books.isNotEmpty()
-            binding.welcomeGroup.isVisible = !hasSearched
-            binding.emptyText.isVisible = hasSearched && books.isEmpty() && viewModel.loading.value != true
-            binding.clearSearchBtn.isVisible = binding.queryInput.text?.isNotBlank() == true || hasSearched
-        }
-
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loading.isVisible = isLoading
-            if (isLoading) {
-                binding.welcomeGroup.isVisible = false
-                binding.emptyText.isVisible = false
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            if (binding.queryInput.text?.toString() != state.query) {
+                binding.queryInput.setText(state.query)
+                binding.queryInput.setSelection(state.query.length)
             }
+
+            adapter.submitList(state.results)
+            binding.recycler.isVisible = state.results.isNotEmpty()
+            binding.loading.isVisible = state.isInitialLoading
+            binding.pbLoadingMore.isVisible = state.isLoadingMore
+            binding.welcomeGroup.isVisible = !state.hasSearched && !state.isInitialLoading
+            binding.emptyText.isVisible = state.hasSearched && state.isEmpty && !state.isInitialLoading
+            binding.clearSearchBtn.isVisible = state.query.isNotBlank() || state.hasSearched
         }
 
-        viewModel.loadingMore.observe(viewLifecycleOwner) { _ ->
-            
-        }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is BookSearchEvent.NavigateToCreatePost -> {
+                        val book = action.book
+                        val direction = BookSearchFragmentDirections.actionBookSearchToCreatePost(
+                            bookId = book.id,
+                            bookTitle = book.title,
+                            bookAuthor = book.author,
+                            bookThumbnail = book.thumbnail,
+                            bookPublishedDate = book.publishedDate,
+                            bookGenre = book.genre,
+                            bookPageCount = book.pageCount ?: -1,
+                            bookDescription = book.description
+                        )
+                        findNavController().navigate(direction)
+                    }
 
-        viewModel.isEmpty.observe(viewLifecycleOwner) { empty ->
-            binding.emptyText.isVisible = empty && hasSearched
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                    is BookSearchEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
 
     override fun onDestroyView() {
-        viewModel.clearSearch()
-        hasSearched = false
+        binding.recycler.adapter = null
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun clearSearchUi() {
-        viewModel.clearSearch()
-        hasSearched = false
-        binding.queryInput.setText("")
-        binding.recycler.isVisible = false
-        binding.emptyText.isVisible = false
-        binding.welcomeGroup.isVisible = true
-        binding.clearSearchBtn.isVisible = false
     }
 }
