@@ -6,7 +6,7 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
 import com.booknook.app.R
 import com.booknook.app.databinding.ViewBookInfoPanelBinding
-import com.squareup.picasso.Picasso
+import com.booknook.app.util.loadRemoteImage
 
 data class BookInfoCardModel(
     val title: String,
@@ -29,13 +29,7 @@ object BookInfoCardBinder {
         binding.bookTitle.text = model.title
         binding.bookAuthor.text = model.author
 
-        Picasso.get()
-            .load(model.thumbnail)
-            .placeholder(R.drawable.book_placeholder)
-            .error(R.drawable.book_placeholder)
-            .fit()
-            .centerCrop()
-            .into(binding.bookThumb)
+        binding.bookThumb.loadRemoteImage(model.thumbnail, R.drawable.book_placeholder)
 
         val genre = model.genre?.trim().orEmpty()
         binding.bookGenre.isVisible = genre.isNotEmpty()

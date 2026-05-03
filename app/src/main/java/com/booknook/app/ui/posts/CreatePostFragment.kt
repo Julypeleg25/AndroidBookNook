@@ -9,17 +9,23 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentCreatePostBinding
-import com.booknook.app.domain.Book
+import com.booknook.app.model.Book
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 import com.squareup.picasso.Picasso
 
 class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
     private var _binding: FragmentCreatePostBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: CreatePostViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: PostEditorViewModel by viewModels {
+        PostEditorViewModel.factory(
+            postsRepository = app.postsRepository,
+            authRepository = app.authRepository
+        )
+    }
     private var pickedImage: Uri? = null
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -68,11 +74,11 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
             val rating = binding.ratingBar.rating.toInt()
             val review = binding.reviewInput.text.toString().trim()
             if (binding.ratingBar.rating == 0f || review.isEmpty()) {
-                Snackbar.make(binding.root, "rating required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.create_post_rating_required, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (pickedImage == null) {
-                Snackbar.make(binding.root, "photo required".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.create_post_photo_required, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -81,24 +87,23 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
     }
 
     private fun observeViewModel() {
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loading.isVisible = isLoading
-            binding.publishBtn.isEnabled = !isLoading
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            binding.loading.isVisible = state.isSaving
+            binding.publishBtn.isEnabled = !state.isSaving
         }
 
-        viewModel.saveSuccess.observe(viewLifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let { success ->
-                if (success) {
-                    com.booknook.app.util.Logger.d("CreatePost", "Consuming success event - Navigating back")
-                    Snackbar.make(binding.root, "Posted successfully!", Snackbar.LENGTH_SHORT).show()
-                    findNavController().popBackStack()
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is PostEditorEvent.Finish -> {
+                        Snackbar.make(binding.root, action.messageRes, Snackbar.LENGTH_SHORT).show()
+                        findNavController().popBackStack()
+                    }
+
+                    is PostEditorEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
                 }
-            }
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
             }
         }
     }
