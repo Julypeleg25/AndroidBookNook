@@ -7,8 +7,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
 import com.booknook.app.databinding.RowBookBinding
-import com.booknook.app.domain.Book
-import com.squareup.picasso.Picasso
+import com.booknook.app.model.Book
+import com.booknook.app.util.loadRemoteImage
 
 class BookAdapter(
     private val onClick: (Book) -> Unit
@@ -35,7 +35,12 @@ class BookAdapter(
         private val onClick: (Book) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(book: Book) {
-            val context = binding.root.context
+            bindText(book)
+            bindImage(book)
+            binding.root.setOnClickListener { onClick(book) }
+        }
+
+        private fun bindText(book: Book) {
             binding.title.text = book.title
             binding.author.text = book.author
 
@@ -47,20 +52,16 @@ class BookAdapter(
             }
 
             if (book.pageCount != null && book.pageCount > 0) {
+                val context = binding.root.context
                 binding.pageCount.text = context.resources.getQuantityString(R.plurals.book_pages, book.pageCount, book.pageCount)
                 binding.pageCount.visibility = android.view.View.VISIBLE
             } else {
                 binding.pageCount.visibility = android.view.View.GONE
             }
+        }
 
-            Picasso.get()
-                .load(book.thumbnail)
-                .placeholder(R.drawable.book_placeholder)
-                .error(R.drawable.book_placeholder)
-                .fit()
-                .centerCrop()
-                .into(binding.thumb)
-            binding.root.setOnClickListener { onClick(book) }
+        private fun bindImage(book: Book) {
+            binding.thumb.loadRemoteImage(book.thumbnail, R.drawable.book_placeholder)
         }
     }
 }

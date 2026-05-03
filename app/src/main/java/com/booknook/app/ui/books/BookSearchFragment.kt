@@ -11,55 +11,53 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentBookSearchBinding
+import com.booknook.app.model.Book
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
 
     private var _binding: FragmentBookSearchBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: BookSearchViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: BookSearchViewModel by viewModels {
+        BookSearchViewModel.factory(app.booksRepository)
+    }
     private var hasSearched = false
 
     private val adapter = BookAdapter { book ->
-        val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
-            bookId = book.id,
-            bookTitle = book.title,
-            bookAuthor = book.author,
-            bookThumbnail = book.thumbnail,
-            bookPublishedDate = book.publishedDate,
-            bookGenre = book.genre,
-            bookPageCount = book.pageCount ?: -1,
-            bookDescription = book.description
-        )
-        findNavController().navigate(action)
+        navigateToCreatePost(book)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentBookSearchBinding.bind(view)
 
-        val layoutManager = LinearLayoutManager(requireContext())
-        binding.recycler.layoutManager = layoutManager
-        binding.recycler.adapter = adapter
+        setupResultsList()
+        setupActions()
+        observeViewModel()
+    }
 
-        
-        binding.recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+    private fun setupResultsList() {
+        binding.recycler.layoutManager = LinearLayoutManager(requireContext())
+        binding.recycler.adapter = adapter
+        binding.recycler.addOnScrollListener(createLoadMoreScrollListener())
+    }
+
+    private fun createLoadMoreScrollListener(): RecyclerView.OnScrollListener {
+        val layoutManager = binding.recycler.layoutManager as LinearLayoutManager
+        return object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-                if (dy > 0) {
-                    val visibleItemCount = layoutManager.childCount
-                    val totalItemCount = layoutManager.itemCount
-                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount && firstVisibleItemPosition >= 0) {
-                        viewModel.loadMore()
-                    }
+                if (dy > 0 && layoutManager.isScrolledToEnd()) {
+                    viewModel.loadMore()
                 }
             }
-        })
+        }
+    }
 
-        observeViewModel()
+    private fun setupActions() {
         binding.doSearchBtn.setOnClickListener { performSearch() }
         binding.clearSearchBtn.setOnClickListener { clearSearchUi() }
 
@@ -80,13 +78,13 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     }
 
     private fun performSearch() {
-        val q = binding.queryInput.text.toString().trim()
-        if (q.isNotEmpty()) {
+        val query = binding.queryInput.text.toString().trim()
+        if (query.isNotEmpty()) {
             hasSearched = true
             binding.welcomeGroup.isVisible = false
-            viewModel.searchBooks(q)
+            viewModel.searchBooks(query)
         } else {
-            Snackbar.make(binding.root, "Enter a search query".toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+            showMessage("Enter a search query")
         }
     }
 
@@ -107,17 +105,13 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
             }
         }
 
-        viewModel.loadingMore.observe(viewLifecycleOwner) { _ ->
-            
-        }
-
         viewModel.isEmpty.observe(viewLifecycleOwner) { empty ->
             binding.emptyText.isVisible = empty && hasSearched
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                showMessage(it)
             }
         }
     }
@@ -137,5 +131,28 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         binding.emptyText.isVisible = false
         binding.welcomeGroup.isVisible = true
         binding.clearSearchBtn.isVisible = false
+    }
+
+    private fun navigateToCreatePost(book: Book) {
+        val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
+            bookId = book.id,
+            bookTitle = book.title,
+            bookAuthor = book.author,
+            bookThumbnail = book.thumbnail,
+            bookPublishedDate = book.publishedDate,
+            bookGenre = book.genre,
+            bookPageCount = book.pageCount ?: -1,
+            bookDescription = book.description
+        )
+        findNavController().navigate(action)
+    }
+
+    private fun showMessage(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun LinearLayoutManager.isScrolledToEnd(): Boolean {
+        val firstVisiblePosition = findFirstVisibleItemPosition()
+        return firstVisiblePosition >= 0 && childCount + firstVisiblePosition >= itemCount
     }
 }

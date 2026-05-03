@@ -3,21 +3,22 @@ package com.booknook.app.ui.books
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.booknook.app.domain.Book
-import com.booknook.app.model.Model
-import com.booknook.app.model.api.ApiModel
+import com.booknook.app.data.repository.BooksRepository
+import com.booknook.app.model.Book
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class BookSearchViewModel : ViewModel() {
+class BookSearchViewModel(
+    private val booksRepository: BooksRepository
+) : ViewModel() {
 
     private val _loading = MutableLiveData(false)
     val loading: LiveData<Boolean> = _loading
 
     private val _loadingMore = MutableLiveData(false)
-    val loadingMore: LiveData<Boolean> = _loadingMore
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
@@ -42,22 +43,13 @@ class BookSearchViewModel : ViewModel() {
 
         if (trimmed == currentQuery) return
 
-        searchJob?.cancel()
-        currentQuery = trimmed
-        startIndex = 0
-        canLoadMore = true
-        _searchResults.value = emptyList()
+        prepareNewSearch(trimmed)
 
         searchJob = viewModelScope.launch {
             try {
-                _loading.value = true
-                _error.value = null
-                _isEmpty.value = false
-                val results = Model.searchBooks(currentQuery, startIndex)
-                _searchResults.value = results
-                _isEmpty.value = results.isEmpty()
-                startIndex = results.size
-                canLoadMore = results.isNotEmpty()
+                setInitialLoading()
+                val books = booksRepository.searchBooks(currentQuery, startIndex)
+                applyInitialResults(books)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -74,18 +66,12 @@ class BookSearchViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 _loadingMore.value = true
-                val results = Model.searchBooks(currentQuery, startIndex)
-                if (results.isNotEmpty()) {
-                    val currentList = _searchResults.value ?: emptyList()
-                    val newList = currentList + results
-                    _searchResults.value = newList.distinctBy { it.id }
-                    startIndex += results.size
-                }
-                canLoadMore = results.isNotEmpty()
+                val books = booksRepository.searchBooks(currentQuery, startIndex)
+                applyMoreResults(books)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                
+                _error.value = mapErrorMessage(e)
             } finally {
                 _loadingMore.value = false
             }
@@ -104,6 +90,36 @@ class BookSearchViewModel : ViewModel() {
         _isEmpty.value = false
     }
 
+    private fun prepareNewSearch(query: String) {
+        searchJob?.cancel()
+        currentQuery = query
+        startIndex = 0
+        canLoadMore = true
+        _searchResults.value = emptyList()
+    }
+
+    private fun setInitialLoading() {
+        _loading.value = true
+        _error.value = null
+        _isEmpty.value = false
+    }
+
+    private fun applyInitialResults(books: List<Book>) {
+        _searchResults.value = books
+        _isEmpty.value = books.isEmpty()
+        startIndex = books.size
+        canLoadMore = books.isNotEmpty()
+    }
+
+    private fun applyMoreResults(books: List<Book>) {
+        if (books.isNotEmpty()) {
+            val currentBooks = _searchResults.value.orEmpty()
+            _searchResults.value = (currentBooks + books).distinctBy { it.id }
+            startIndex += books.size
+        }
+        canLoadMore = books.isNotEmpty()
+    }
+
     private fun mapErrorMessage(e: Exception): String {
         val msg = e.message ?: return "Search failed"
         return when {
@@ -111,6 +127,20 @@ class BookSearchViewModel : ViewModel() {
                 "Device is offline. Please check your connection."
             msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
             else -> msg
+        }
+    }
+
+    companion object {
+        fun factory(booksRepository: BooksRepository): ViewModelProvider.Factory {
+            return object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    if (modelClass.isAssignableFrom(BookSearchViewModel::class.java)) {
+                        return BookSearchViewModel(booksRepository) as T
+                    }
+                    throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+                }
+            }
         }
     }
 }
