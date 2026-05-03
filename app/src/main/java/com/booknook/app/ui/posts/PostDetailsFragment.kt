@@ -11,9 +11,9 @@ import com.booknook.app.R
 import com.booknook.app.base.MyApplication
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.databinding.FragmentPostDetailsBinding
+import com.booknook.app.util.displayPostImageUrl
 import com.booknook.app.util.formatRelativeTime
 import com.booknook.app.util.loadRemoteImage
-import com.booknook.app.util.nullIfBlank
 import com.google.android.material.snackbar.Snackbar
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
@@ -173,7 +173,7 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
         get() = if (isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
 
     private val PostEntity.displayImageUrl: String?
-        get() = imageUrl.nullIfBlank() ?: bookThumbnail
+        get() = displayPostImageUrl
 
     private val PostEntity.metaText: String
         get() = getString(

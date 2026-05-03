@@ -1,6 +1,7 @@
 package com.booknook.app.ui.posts
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -8,8 +9,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.databinding.RowPostBinding
+import com.booknook.app.util.displayPostImageUrl
 import com.booknook.app.util.formatRelativeTime
 import com.booknook.app.util.loadRemoteImage
+import com.booknook.app.util.toShortGenreList
 import java.text.NumberFormat
 
 class PostsAdapter(
@@ -22,7 +25,15 @@ class PostsAdapter(
 ) : ListAdapter<PostEntity, PostsAdapter.Holder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        return Holder(RowPostBinding.inflate(LayoutInflater.from(parent.context), parent, false), currentUserId, onClick, showEngagement, onLike, onEdit, onDelete)
+        return Holder(
+            RowPostBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+            currentUserId,
+            onClick,
+            showEngagement,
+            onLike,
+            onEdit,
+            onDelete
+        )
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
@@ -50,6 +61,15 @@ class PostsAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(post: PostEntity) {
+            bindPostText(post)
+            bindBookInfo(post)
+            bindEngagement(post)
+            bindActions(post)
+            binding.thumb.loadRemoteImage(post.displayPostImageUrl, R.drawable.book_placeholder)
+            binding.root.setOnClickListener { onClick(post.id) }
+        }
+
+        private fun bindPostText(post: PostEntity) {
             val context = binding.root.context
             binding.title.text = post.bookTitle
             binding.author.text = post.bookAuthor
@@ -59,54 +79,62 @@ class PostsAdapter(
                 post.username,
                 context.formatRelativeTime(post.createdAt)
             )
+        }
 
+        private fun bindBookInfo(post: PostEntity) {
+            val context = binding.root.context
             val infoParts = mutableListOf<String>()
-            if (!post.bookGenre.isNullOrBlank()) infoParts.add(post.bookGenre)
+            post.bookGenre.toShortGenreList()?.let { genre -> infoParts.add(genre) }
             if (post.bookPageCount != null && post.bookPageCount > 0) {
-                infoParts.add(context.resources.getQuantityString(R.plurals.book_pages, post.bookPageCount, post.bookPageCount))
+                infoParts.add(
+                    context.resources.getQuantityString(
+                        R.plurals.book_pages,
+                        post.bookPageCount,
+                        post.bookPageCount
+                    )
+                )
             }
-            
+
             if (infoParts.isNotEmpty()) {
-                binding.bookInfo.text = infoParts.joinToString("  •  ")
-                binding.bookInfo.visibility = android.view.View.VISIBLE
+                binding.bookInfo.text = infoParts.joinToString("  |  ")
+                binding.bookInfo.visibility = View.VISIBLE
             } else {
-                binding.bookInfo.visibility = android.view.View.GONE
-            }
-            
-            val isOwnPost = post.userId == currentUserId
-            if (showEngagement) {
-                binding.engagementLayout.visibility = android.view.View.VISIBLE
-                val numberFormat = NumberFormat.getIntegerInstance()
-                binding.tvLikesCount.text = numberFormat.format(post.likesCount)
-                binding.tvCommentsCount.text = numberFormat.format(post.commentsCount)
-
-                val likeIcon = if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
-                binding.btnLike.setIconResource(likeIcon)
-
-                if (isOwnPost) {
-                    binding.btnLike.isEnabled = false
-                    binding.btnLike.alpha = 0.5f
-                    binding.btnLike.setOnClickListener(null)
-                } else {
-                    binding.btnLike.isEnabled = true
-                    binding.btnLike.alpha = 1.0f
-                    binding.btnLike.setOnClickListener { onLike?.invoke(post.id) }
-                }
-            } else {
-                binding.engagementLayout.visibility = android.view.View.GONE
-            }
-            
-            binding.thumb.loadRemoteImage(post.bookThumbnail, R.drawable.book_placeholder)
-
-            binding.root.setOnClickListener { onClick(post.id) }
-
-            if (isOwnPost && onEdit != null && onDelete != null) {
-                binding.actionLayout.visibility = android.view.View.VISIBLE
-                binding.btnEdit.setOnClickListener { onEdit(post.id) }
-                binding.btnDelete.setOnClickListener { onDelete(post.id) }
-            } else {
-                binding.actionLayout.visibility = android.view.View.GONE
+                binding.bookInfo.visibility = View.GONE
             }
         }
+
+        private fun bindEngagement(post: PostEntity) {
+            if (!showEngagement) {
+                binding.engagementLayout.visibility = View.GONE
+                return
+            }
+
+            binding.engagementLayout.visibility = View.VISIBLE
+            val numberFormat = NumberFormat.getIntegerInstance()
+            binding.tvLikesCount.text = numberFormat.format(post.likesCount)
+            binding.tvCommentsCount.text = numberFormat.format(post.commentsCount)
+            binding.btnLike.setIconResource(
+                if (post.isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+            )
+
+            val canLike = post.userId != currentUserId
+            binding.btnLike.isEnabled = canLike
+            binding.btnLike.alpha = if (canLike) ENABLED_ALPHA else DISABLED_ALPHA
+            binding.btnLike.setOnClickListener(if (canLike) View.OnClickListener { onLike?.invoke(post.id) } else null)
+        }
+
+        private fun bindActions(post: PostEntity) {
+            val canManagePost = post.userId == currentUserId && onEdit != null && onDelete != null
+            binding.actionLayout.visibility = if (canManagePost) View.VISIBLE else View.GONE
+            if (canManagePost) {
+                binding.btnEdit.setOnClickListener { onEdit?.invoke(post.id) }
+                binding.btnDelete.setOnClickListener { onDelete?.invoke(post.id) }
+            }
+        }
+    }
+
+    companion object {
+        private const val ENABLED_ALPHA = 1.0f
+        private const val DISABLED_ALPHA = 0.5f
     }
 }

@@ -61,6 +61,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textColor="@color/bn_orange_dark"
             android:textSize="12sp"
             android:textStyle="italic"
