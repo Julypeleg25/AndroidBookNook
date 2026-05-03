@@ -9,7 +9,7 @@ import com.booknook.app.R
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.databinding.RowPostBinding
 import com.booknook.app.util.formatRelativeTime
-import com.squareup.picasso.Picasso
+import com.booknook.app.util.loadRemoteImage
 import java.text.NumberFormat
 
 class PostsAdapter(
@@ -96,13 +96,7 @@ class PostsAdapter(
                 binding.engagementLayout.visibility = android.view.View.GONE
             }
             
-            Picasso.get()
-                .load(post.bookThumbnail)
-                .placeholder(R.drawable.book_placeholder)
-                .error(R.drawable.book_placeholder)
-                .fit()
-                .centerCrop()
-                .into(binding.thumb)
+            binding.thumb.loadRemoteImage(post.bookThumbnail, R.drawable.book_placeholder)
 
             binding.root.setOnClickListener { onClick(post.id) }
 
