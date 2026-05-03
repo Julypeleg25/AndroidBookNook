@@ -158,22 +158,6 @@ class FirebaseModel {
         return documentToPostEntity(doc, isLiked)
     }
 
-    suspend fun fetchAllPosts(): List<PostEntity> {
-        val snap = db.collection("posts").orderBy("createdAt").get().await()
-        val posts = snap.documents.mapNotNull { documentToPostEntity(it, false) }
-        val uid = currentUserId() ?: return posts.sortedByDescending { it.createdAt }
-        val likedPostIds = db.collectionGroup("likes")
-                .whereEqualTo(FieldPath.documentId(), uid)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { it.reference.parent.parent?.id }
-                .toSet()
-        return posts.map { post ->
-            if (likedPostIds.contains(post.id)) post.copy(isLikedByUser = true) else post
-        }.sortedByDescending { it.createdAt }
-    }
-
     suspend fun fetchPostsByUser(userId: String): List<PostEntity> {
         val currentUserId = currentUserId()
         val documents = fetchPostsByUserDocuments(userId)

@@ -49,8 +49,6 @@ class LocalCacheDataSource(
 
     suspend fun deletePost(postId: String) = postDao.deleteById(postId)
 
-    suspend fun clearPosts() = postDao.deleteAll()
-
     suspend fun deleteUserPostsNotIn(userId: String, ids: List<String>) {
         if (ids.isEmpty()) {
             postDao.deleteByUser(userId)
@@ -69,8 +67,6 @@ class LocalCacheDataSource(
 
     suspend fun replaceWishlist(userId: String, items: List<WishlistEntity>) = wishlistDao.replaceForUser(userId, items)
 
-    suspend fun existsInWishlist(key: String) = wishlistDao.existsByKey(key)
-
     suspend fun getWishlist(key: String) = wishlistDao.getByKey(key)
 
     suspend fun deleteWishlist(key: String) = wishlistDao.deleteByKey(key)
@@ -84,8 +80,6 @@ class LocalCacheDataSource(
     suspend fun upsertReadlist(item: ReadlistEntity) = readlistDao.upsert(item)
 
     suspend fun replaceReadlist(userId: String, items: List<ReadlistEntity>) = readlistDao.replaceForUser(userId, items)
-
-    suspend fun existsInReadlist(key: String) = readlistDao.existsByKey(key)
 
     suspend fun getReadlist(key: String) = readlistDao.getByKey(key)
 
@@ -114,8 +108,6 @@ class LocalCacheDataSource(
     suspend fun replaceUserLikes(userId: String, items: List<LikeEntity>) {
         likeDao.replaceUserLikes(userId, items)
     }
-
-    suspend fun clearUserLikes(userId: String) = likeDao.clearUserLikes(userId)
 
     suspend fun deleteLike(userId: String, postId: String) = likeDao.delete(userId, postId)
 
