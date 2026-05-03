@@ -33,6 +33,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentRegisterBinding.bind(view)
+        binding.ivAvatar.setImageResource(R.drawable.ic_default_avatar)
 
         observeViewModel()
 

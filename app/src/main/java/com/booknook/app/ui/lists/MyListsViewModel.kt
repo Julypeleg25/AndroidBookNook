@@ -13,6 +13,7 @@ import com.booknook.app.data.repository.AuthRepository
 import com.booknook.app.data.repository.ListsRepository
 import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class MyListsViewModel(
@@ -20,32 +21,27 @@ class MyListsViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val currentUserId = authRepository.currentUserId()
+    private var currentUserId = authRepository.currentUserId()
 
     private val _uiState = MediatorLiveData(MyListsUiState())
     val uiState: LiveData<MyListsUiState> = _uiState
 
     private val _event = MutableLiveData<Event<MyListsEvent>>()
     val event: LiveData<Event<MyListsEvent>> = _event
+    private var wishlistSource: LiveData<List<SavedBookListItem>>? = null
+    private var readlistSource: LiveData<List<SavedBookListItem>>? = null
 
     init {
-        _uiState.value = MyListsUiState()
-        val userId = currentUserId
-        if (userId != null) {
-            _uiState.addSource(listsRepository.observeWishlist(userId)) { wishlist ->
-                _uiState.value = _uiState.value?.copy(wishlist = wishlist)
-            }
-            _uiState.addSource(listsRepository.observeReadlist(userId)) { readlist ->
-                _uiState.value = _uiState.value?.copy(readlist = readlist)
-            }
+        bindCurrentUser(currentUserId)
 
-            viewModelScope.launch {
-                try {
-                    listsRepository.refreshLists(userId)
-                } catch (e: Exception) {
-                    _event.value = Event(MyListsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_post_action)))
+        viewModelScope.launch {
+            authRepository.authState
+                .distinctUntilChanged()
+                .collect { userId ->
+                    if (userId == currentUserId) return@collect
+                    currentUserId = userId
+                    bindCurrentUser(userId)
                 }
-            }
         }
     }
 
@@ -80,6 +76,35 @@ class MyListsViewModel(
                 _event.value = Event(MyListsEvent.ShowMessage(successMessageRes))
             } catch (e: Exception) {
                 _event.value = Event(MyListsEvent.ShowMessage(e.toUserFriendlyMessageRes(errorMessageRes)))
+            }
+        }
+    }
+
+    private fun bindCurrentUser(userId: String?) {
+        wishlistSource?.let { _uiState.removeSource(it) }
+        readlistSource?.let { _uiState.removeSource(it) }
+        _uiState.value = MyListsUiState()
+
+        if (userId == null) {
+            return
+        }
+
+        wishlistSource = listsRepository.observeWishlist(userId).also { source ->
+            _uiState.addSource(source) { wishlist ->
+                _uiState.value = _uiState.value?.copy(wishlist = wishlist)
+            }
+        }
+        readlistSource = listsRepository.observeReadlist(userId).also { source ->
+            _uiState.addSource(source) { readlist ->
+                _uiState.value = _uiState.value?.copy(readlist = readlist)
+            }
+        }
+
+        viewModelScope.launch {
+            try {
+                listsRepository.refreshLists(userId)
+            } catch (e: Exception) {
+                _event.value = Event(MyListsEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.error_post_action)))
             }
         }
     }

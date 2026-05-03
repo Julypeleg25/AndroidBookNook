@@ -22,8 +22,8 @@ interface ReadlistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<ReadlistEntity>)
 
-    @Query("SELECT COUNT(*) > 0 FROM readlist WHERE key = :key")
-    fun observeExistsByKey(key: String): LiveData<Boolean>
+    @Query("SELECT COUNT(*) > 0 FROM readlist WHERE userId = :userId AND bookId = :bookId")
+    fun observeExists(userId: String, bookId: String): LiveData<Boolean>
 
     @Query("SELECT COUNT(*) > 0 FROM readlist WHERE key = :key")
     suspend fun existsByKey(key: String): Boolean

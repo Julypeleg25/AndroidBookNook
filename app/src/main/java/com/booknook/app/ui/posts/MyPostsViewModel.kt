@@ -13,6 +13,7 @@ import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.R
 import com.booknook.app.util.Event
 import com.booknook.app.util.toUserFriendlyMessageRes
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class MyPostsViewModel(
@@ -20,7 +21,8 @@ class MyPostsViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    val currentUserId: String? = authRepository.currentUserId()
+    var currentUserId: String? = authRepository.currentUserId()
+        private set
 
     private val _uiState = MediatorLiveData(MyPostsUiState(currentUserId = currentUserId))
     val uiState: LiveData<MyPostsUiState> = _uiState
@@ -29,20 +31,37 @@ class MyPostsViewModel(
     val event: LiveData<Event<MyPostsEvent>> = _event
 
     private var isLikeProcessing = false
+    private var postsSource: LiveData<List<PostEntity>>? = null
 
     init {
-        val userId = currentUserId
+        bindCurrentUser(currentUserId)
+
+        viewModelScope.launch {
+            authRepository.authState
+                .distinctUntilChanged()
+                .collect { userId ->
+                    if (userId == currentUserId) return@collect
+                    currentUserId = userId
+                    bindCurrentUser(userId)
+                }
+        }
+    }
+
+    private fun bindCurrentUser(userId: String?) {
+        postsSource?.let { _uiState.removeSource(it) }
+        _uiState.value = MyPostsUiState(currentUserId = userId)
+
         if (userId != null) {
-            _uiState.addSource(postsRepository.observeMyPosts(userId, userId)) { posts ->
-                val currentState = _uiState.value ?: return@addSource
-                _uiState.value = currentState.copy(
-                    posts = posts,
-                    isEmpty = posts.isEmpty() && !currentState.isInitialLoading && !currentState.isRefreshing
-                )
+            postsSource = postsRepository.observeMyPosts(userId, userId).also { source ->
+                _uiState.addSource(source) { posts ->
+                    val currentState = _uiState.value ?: return@addSource
+                    _uiState.value = currentState.copy(
+                        posts = posts,
+                        isEmpty = posts.isEmpty() && !currentState.isInitialLoading && !currentState.isRefreshing
+                    )
+                }
             }
             refreshPosts(isUserInitiated = false)
-        } else {
-            _uiState.value = MyPostsUiState()
         }
     }
 

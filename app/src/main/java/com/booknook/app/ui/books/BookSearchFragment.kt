@@ -22,7 +22,10 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     private val binding get() = _binding!!
     private val app get() = requireActivity().application as MyApplication
     private val viewModel: BookSearchViewModel by viewModels {
-        BookSearchViewModel.factory(app.booksRepository)
+        BookSearchViewModel.factory(
+            booksRepository = app.booksRepository,
+            authRepository = app.authRepository
+        )
     }
 
     private val adapter = BookAdapter { book ->

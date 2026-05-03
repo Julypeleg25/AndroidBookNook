@@ -71,8 +71,8 @@ Search for a book and publish your thoughts.</string>
     <string name="error_offline">It looks like you\'re offline. Please check your internet connection.</string>
     <string name="error_permission">You don\'t have permission to do that.</string>
     <string name="error_auth_user_not_found">We couldn\'t find an account with this email.</string>
-    <string name="error_auth_wrong_password">The password you entered is incorrect. Please try again.</string>
-    <string name="error_auth_invalid_credentials">Invalid email or password.</string>
+    <string name="error_auth_wrong_password">Incorrect email or password.</string>
+    <string name="error_auth_invalid_credentials">Incorrect email or password.</string>
     <string name="error_auth_invalid_email">Invalid email format.</string>
     <string name="error_auth_password_short">Password must be at least 6 characters.</string>
     <string name="error_auth_email_exists">This email is already registered.</string>

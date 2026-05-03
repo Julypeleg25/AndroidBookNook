@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.booknook.app.R
+import com.booknook.app.data.repository.AuthRepository
 import com.booknook.app.data.repository.BooksRepository
 import com.booknook.app.model.Book
 import com.booknook.app.util.Event
@@ -14,10 +15,12 @@ import com.booknook.app.util.Logger
 import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class BookSearchViewModel(
-    private val booksRepository: BooksRepository
+    private val booksRepository: BooksRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableLiveData(BookSearchUiState())
@@ -30,6 +33,19 @@ class BookSearchViewModel(
     private var startIndex = 0
     private var canLoadMore = true
     private var searchJob: Job? = null
+    private var currentUserId: String? = authRepository.currentUserId()
+
+    init {
+        viewModelScope.launch {
+            authRepository.authState
+                .distinctUntilChanged()
+                .collect { userId ->
+                    if (userId == currentUserId) return@collect
+                    currentUserId = userId
+                    clearSearch()
+                }
+        }
+    }
 
     fun onQueryChanged(query: String) {
         if (_uiState.value?.query == query) return
@@ -130,12 +146,15 @@ class BookSearchViewModel(
     }
 
     companion object {
-        fun factory(booksRepository: BooksRepository): ViewModelProvider.Factory {
+        fun factory(
+            booksRepository: BooksRepository,
+            authRepository: AuthRepository
+        ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     if (modelClass.isAssignableFrom(BookSearchViewModel::class.java)) {
-                        return BookSearchViewModel(booksRepository) as T
+                        return BookSearchViewModel(booksRepository, authRepository) as T
                     }
                     throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
                 }

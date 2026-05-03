@@ -44,24 +44,28 @@ class ApiModel {
         com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $normalizedQuery (startIndex: $startIndex)")
         val res = api.search(normalizedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
         val items = res.items ?: return emptyList()
-        return items.map { dto -> dto.toDomainBook() }
+        return items.mapNotNull { dto -> dto.toDomainBookOrNull() }
     }
 
     suspend fun getBook(volumeId: String): Book? {
         if (volumeId.isBlank()) return null
-        return api.getVolume(volumeId).toDomainBook()
+        return api.getVolume(volumeId).toDomainBookOrNull()
     }
 }
 
-private fun BookDto.toDomainBook(): Book {
+private fun BookDto.toDomainBookOrNull(): Book? {
+    val normalizedId = id.trim()
+    val info = volumeInfo ?: return null
+    if (normalizedId.isEmpty()) return null
+
     return Book(
-        id = id,
-        title = volumeInfo.title ?: "",
-        author = volumeInfo.authors?.joinToString(", ") ?: "",
-        thumbnail = volumeInfo.imageLinks?.thumbnail?.replace("http://", "https://"),
-        publishedDate = volumeInfo.publishedDate,
-        genre = volumeInfo.categories?.joinToString(", "),
-        pageCount = volumeInfo.pageCount,
-        description = volumeInfo.description
+        id = normalizedId,
+        title = info.title ?: "",
+        author = info.authors?.joinToString(", ") ?: "",
+        thumbnail = info.imageLinks?.thumbnail?.replace("http://", "https://"),
+        publishedDate = info.publishedDate,
+        genre = info.categories?.joinToString(", "),
+        pageCount = info.pageCount,
+        description = info.description
     )
 }

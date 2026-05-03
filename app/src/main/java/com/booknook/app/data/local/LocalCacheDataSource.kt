@@ -61,7 +61,9 @@ class LocalCacheDataSource(
 
     suspend fun getWishlistByUser(userId: String) = wishlistDao.getByUserSync(userId)
 
-    fun observeWishlistExists(key: String): LiveData<Boolean> = wishlistDao.observeExistsByKey(key)
+    fun observeWishlistExists(userId: String, bookId: String): LiveData<Boolean> {
+        return wishlistDao.observeExists(userId, bookId)
+    }
 
     suspend fun upsertWishlist(item: WishlistEntity) = wishlistDao.upsert(item)
 
@@ -75,7 +77,9 @@ class LocalCacheDataSource(
 
     suspend fun getReadlistByUser(userId: String) = readlistDao.getByUserSync(userId)
 
-    fun observeReadlistExists(key: String): LiveData<Boolean> = readlistDao.observeExistsByKey(key)
+    fun observeReadlistExists(userId: String, bookId: String): LiveData<Boolean> {
+        return readlistDao.observeExists(userId, bookId)
+    }
 
     suspend fun upsertReadlist(item: ReadlistEntity) = readlistDao.upsert(item)
 
@@ -130,6 +134,15 @@ class LocalCacheDataSource(
         readlistDao.deleteAll()
         userDao.clear()
         cachedBookDao.deleteAll()
+        likeDao.deleteAll()
+        commentDao.deleteAll()
+    }
+
+    suspend fun clearUserScopedData() {
+        postDao.deleteAll()
+        wishlistDao.deleteAll()
+        readlistDao.deleteAll()
+        userDao.clear()
         likeDao.deleteAll()
         commentDao.deleteAll()
     }

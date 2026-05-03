@@ -31,7 +31,7 @@ class CommentsAdapter : ListAdapter<CommentEntity, CommentsAdapter.CommentViewHo
             binding.time.text = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(Date(comment.createdAt))
 
-            binding.avatar.loadRemoteImage(comment.userAvatarUrl, R.drawable.ic_launcher_foreground)
+            binding.avatar.loadRemoteImage(comment.userAvatarUrl, R.drawable.ic_default_avatar)
         }
     }
 
