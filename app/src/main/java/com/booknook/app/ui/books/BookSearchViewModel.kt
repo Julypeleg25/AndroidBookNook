@@ -15,7 +15,6 @@ import com.booknook.app.util.Logger
 import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class BookSearchViewModel(
@@ -36,15 +35,7 @@ class BookSearchViewModel(
     private var currentUserId: String? = authRepository.currentUserId()
 
     init {
-        viewModelScope.launch {
-            authRepository.authState
-                .distinctUntilChanged()
-                .collect { userId ->
-                    if (userId == currentUserId) return@collect
-                    currentUserId = userId
-                    clearSearch()
-                }
-        }
+        observeAuthenticationChanges()
     }
 
     fun onQueryChanged(query: String) {
@@ -107,6 +98,20 @@ class BookSearchViewModel(
         startIndex = 0
         canLoadMore = true
         _uiState.value = BookSearchUiState()
+    }
+
+    private fun observeAuthenticationChanges() {
+        viewModelScope.launch {
+            authRepository.authState.collect { userId ->
+                if (!hasAuthenticatedUserChanged(userId)) return@collect
+                currentUserId = userId
+                clearSearch()
+            }
+        }
+    }
+
+    private fun hasAuthenticatedUserChanged(userId: String?): Boolean {
+        return userId != currentUserId
     }
 
     private fun prepareSearch(query: String) {

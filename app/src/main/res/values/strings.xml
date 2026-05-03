@@ -12,7 +12,7 @@
     <string name="register_button">Register</string>
     <string name="register_login_link">Already have an account? Login</string>
     <string name="time_just_now">Just now</string>
-    <string name="post_meta_format">%1$s • %2$s</string>
+    <string name="post_meta_format">%1$s - %2$s</string>
     <string name="selected_book_header">Selected Book</string>
     <string name="selected_book_subtitle">Review the book\'s details.</string>
     <string name="book_snapshot_header">Book Snapshot</string>
@@ -31,13 +31,13 @@
     <string name="post_wishlist_action">Add to wishlist</string>
     <string name="post_readlist_action">Add to readlist</string>
     <string name="post_comments_header">Comments</string>
-    <string name="post_comment_hint">Add a comment…</string>
+    <string name="post_comment_hint">Add a comment...</string>
     <string name="post_add_comment_action">Send comment</string>
     <string name="post_wishlist_button">Wishlist</string>
     <string name="post_readlist_button">Readlist</string>
     <string name="edit_post_action">Edit post</string>
     <string name="delete_post_action">Delete post</string>
-    <string name="posts_search_hint">Search posts…</string>
+    <string name="posts_search_hint">Search posts...</string>
     <string name="posts_empty_state">No posts found</string>
     <string name="search_books_title">Search Books</string>
     <string name="search_books_hint">Search by title or author</string>
@@ -72,7 +72,7 @@ Search for a book and publish your thoughts.</string>
     <string name="error_permission">You don\'t have permission to do that.</string>
     <string name="error_auth_user_not_found">We couldn\'t find an account with this email.</string>
     <string name="error_auth_wrong_password">Incorrect email or password.</string>
-    <string name="error_auth_invalid_credentials">Incorrect email or password.</string>
+    <string name="error_auth_invalid_credentials">Invalid email or password.</string>
     <string name="error_auth_invalid_email">Invalid email format.</string>
     <string name="error_auth_password_short">Password must be at least 6 characters.</string>
     <string name="error_auth_email_exists">This email is already registered.</string>
