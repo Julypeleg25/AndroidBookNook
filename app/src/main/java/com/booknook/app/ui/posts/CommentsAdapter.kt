@@ -7,10 +7,10 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.data.local.entities.CommentEntity
 import com.booknook.app.databinding.RowCommentBinding
+import com.booknook.app.util.loadRemoteImage
 import java.text.DateFormat
 import java.util.Date
 
-import com.squareup.picasso.Picasso
 import com.booknook.app.R
 
 class CommentsAdapter : ListAdapter<CommentEntity, CommentsAdapter.CommentViewHolder>(CommentDiffCallback()) {
@@ -31,17 +31,7 @@ class CommentsAdapter : ListAdapter<CommentEntity, CommentsAdapter.CommentViewHo
             binding.time.text = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                 .format(Date(comment.createdAt))
 
-            if (!comment.userAvatarUrl.isNullOrBlank()) {
-                Picasso.get()
-                    .load(comment.userAvatarUrl)
-                    .placeholder(R.drawable.ic_launcher_foreground)
-                    .error(R.drawable.ic_launcher_foreground)
-                    .fit()
-                    .centerCrop()
-                    .into(binding.avatar)
-            } else {
-                binding.avatar.setImageResource(R.drawable.ic_launcher_foreground)
-            }
+            binding.avatar.loadRemoteImage(comment.userAvatarUrl, R.drawable.ic_launcher_foreground)
         }
     }
 
