@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentRegisterBinding
 import com.google.android.material.snackbar.Snackbar
 
@@ -16,7 +17,10 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: AuthViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: AuthViewModel by viewModels {
+        AuthViewModel.factory(app.authRepository)
+    }
     
     private var selectedAvatarUri: Uri? = null
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -42,34 +46,41 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             val username = binding.etUsername.text.toString().trim()
 
             if (email.isEmpty() || password.isEmpty() || username.isEmpty()) {
-                Snackbar.make(binding.root, "Email, password and username required", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, R.string.register_required_error, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            viewModel.register(email, password, username, selectedAvatarUri)
+            viewModel.onRegisterSubmitted(email, password, username, selectedAvatarUri)
         }
 
         binding.tvLogin.setOnClickListener {
-            findNavController().popBackStack()
+            viewModel.onBackToLoginClicked()
         }
     }
 
     private fun observeViewModel() {
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            setLoading(isLoading)
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            setLoading(state.isLoading)
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { event ->
+        viewModel.event.observe(viewLifecycleOwner) { event ->
             event.getContentIfNotHandled()?.let { error ->
-                Snackbar.make(binding.root, error, Snackbar.LENGTH_SHORT).show()
-            }
-        }
+                when (error) {
+                    AuthEvent.NavigateToRegister -> Unit
 
-        viewModel.registrationSuccess.observe(viewLifecycleOwner) { event ->
-            event.getContentIfNotHandled()?.let {
-                Snackbar.make(binding.root, "Welcome to BookNook!", Snackbar.LENGTH_SHORT).show()
-                // Navigate to feed and clear the auth stack
-                findNavController().navigate(R.id.action_registerFragment_to_postsFragment)
+                    AuthEvent.NavigateBackToLogin -> {
+                        findNavController().popBackStack()
+                    }
+
+                    is AuthEvent.NavigateToPosts -> {
+                        Snackbar.make(binding.root, error.messageRes, Snackbar.LENGTH_SHORT).show()
+                        findNavController().navigate(R.id.action_registerFragment_to_postsFragment)
+                    }
+
+                    is AuthEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(error.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
