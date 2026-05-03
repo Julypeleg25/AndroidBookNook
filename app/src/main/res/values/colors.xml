@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
     <color name="bn_beige">#F6EBDD</color>
@@ -12,5 +11,4 @@
     <color name="bn_pink_dark">#B06A79</color>
     <color name="bn_brown_text">#4B3A32</color>
     <color name="bn_secondary_text">#78665E</color>
-    <color name="gray">#808080</color>
 </resources>
