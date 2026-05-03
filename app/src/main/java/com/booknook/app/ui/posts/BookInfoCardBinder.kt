@@ -9,6 +9,7 @@ import androidx.core.view.isVisible
 import com.booknook.app.R
 import com.booknook.app.databinding.ViewBookInfoPanelBinding
 import com.booknook.app.util.loadRemoteImage
+import com.booknook.app.util.toShortGenreList
 
 data class BookInfoCardModel(
     val title: String,
@@ -39,7 +40,7 @@ object BookInfoCardBinder {
     }
 
     private fun bindGenre(binding: ViewBookInfoPanelBinding, rawGenre: String?) {
-        val genre = rawGenre?.trim().orEmpty()
+        val genre = rawGenre.toShortGenreList().orEmpty()
         binding.bookGenre.isVisible = genre.isNotEmpty()
         if (genre.isNotEmpty()) {
             binding.bookGenre.text = genre

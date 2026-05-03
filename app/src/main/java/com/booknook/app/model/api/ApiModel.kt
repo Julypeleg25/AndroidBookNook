@@ -38,12 +38,11 @@ class ApiModel {
     }
 
     suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> {
-        val q = query.lowercase().trim()
-        if (q.isBlank()) return emptyList()
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) return emptyList()
 
-        val refinedQuery = q
-        com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $refinedQuery (startIndex: $startIndex)")
-        val res = api.search(refinedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
+        com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $normalizedQuery (startIndex: $startIndex)")
+        val res = api.search(normalizedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
         val items = res.items ?: return emptyList()
         return items.map { dto -> dto.toDomainBook() }
     }

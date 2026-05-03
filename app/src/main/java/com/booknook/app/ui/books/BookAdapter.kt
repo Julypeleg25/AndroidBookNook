@@ -9,6 +9,7 @@ import com.booknook.app.R
 import com.booknook.app.databinding.RowBookBinding
 import com.booknook.app.model.Book
 import com.booknook.app.util.loadRemoteImage
+import com.booknook.app.util.toShortGenreList
 
 class BookAdapter(
     private val onClick: (Book) -> Unit
@@ -43,17 +44,28 @@ class BookAdapter(
         private fun bindText(book: Book) {
             binding.title.text = book.title
             binding.author.text = book.author
+            bindGenre(book)
+            bindPageCount(book)
+        }
 
-            if (!book.genre.isNullOrBlank()) {
-                binding.genre.text = book.genre
+        private fun bindGenre(book: Book) {
+            val genre = book.genre.toShortGenreList()
+            if (genre != null) {
+                binding.genre.text = genre
                 binding.genre.visibility = android.view.View.VISIBLE
             } else {
                 binding.genre.visibility = android.view.View.GONE
             }
+        }
 
+        private fun bindPageCount(book: Book) {
             if (book.pageCount != null && book.pageCount > 0) {
                 val context = binding.root.context
-                binding.pageCount.text = context.resources.getQuantityString(R.plurals.book_pages, book.pageCount, book.pageCount)
+                binding.pageCount.text = context.resources.getQuantityString(
+                    R.plurals.book_pages,
+                    book.pageCount,
+                    book.pageCount
+                )
                 binding.pageCount.visibility = android.view.View.VISIBLE
             } else {
                 binding.pageCount.visibility = android.view.View.GONE
