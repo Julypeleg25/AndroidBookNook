@@ -8,44 +8,41 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.booknook.app.R
+import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentPostsBinding
-import com.booknook.app.model.Model
 import com.google.android.material.snackbar.Snackbar
-import com.booknook.app.util.toUserFriendlyMessage
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
 
     private var _binding: FragmentPostsBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: PostsViewModel by viewModels()
+    private val app get() = requireActivity().application as MyApplication
+    private val viewModel: PostsViewModel by viewModels {
+        PostsViewModel.factory(
+            postsRepository = app.postsRepository,
+            authRepository = app.authRepository
+        )
+    }
 
-    private val adapter = PostsAdapter(
-        currentUserId = Model.currentUserId(),
-        onClick = { postId ->
-            val action = PostsFragmentDirections.actionPostsToDetails(postId)
-            findNavController().navigate(action)
-        },
-        onLike = { postId ->
-            viewModel.toggleLike(postId)
-        },
-        onEdit = { postId ->
-            val action = PostsFragmentDirections.actionPostsToEdit(postId)
-            findNavController().navigate(action)
-        },
+    private val adapter by lazy { PostsAdapter(
+        currentUserId = viewModel.currentUserId,
+        onClick = viewModel::onPostSelected,
+        onLike = viewModel::onLikeClicked,
+        onEdit = viewModel::onEditRequested,
         onDelete = { postId ->
             showDeleteConfirmation(postId)
         }
-    )
+    ) }
 
     private fun showDeleteConfirmation(postId: String) {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Post")
-            .setMessage("Are you sure you want to delete this post? This action cannot be undone.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Delete") { _, _ ->
-                viewModel.deletePost(postId)
-                Snackbar.make(binding.root, "Post deleted", Snackbar.LENGTH_SHORT).show()
+            .setTitle(R.string.delete_post_title)
+            .setMessage(R.string.delete_post_message)
+            .setNegativeButton(R.string.action_cancel, null)
+            .setPositiveButton(R.string.delete_post_confirm) { _, _ ->
+                viewModel.onDeleteConfirmed(postId)
             }
             .show()
     }
@@ -62,32 +59,65 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
             viewModel.refreshPosts()
         }
 
+        val layoutManager = binding.recyclerView.layoutManager as LinearLayoutManager
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy > 0) {
+                    val visibleItemCount = layoutManager.childCount
+                    val totalItemCount = layoutManager.itemCount
+                    val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                    if ((visibleItemCount + firstVisible) >= totalItemCount && firstVisible >= 0) {
+                        viewModel.onLoadMoreRequested()
+                    }
+                }
+            }
+        })
+
         binding.searchInput.doAfterTextChanged { text ->
-            viewModel.filterPosts(text?.toString()?.trim().orEmpty())
+            viewModel.onSearchQueryChanged(text?.toString().orEmpty())
         }
 
         observeViewModel()
     }
 
     private fun observeViewModel() {
-        viewModel.posts.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
-            binding.emptyText.isVisible = list.isEmpty()
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            if (binding.searchInput.text?.toString() != state.query) {
+                binding.searchInput.setText(state.query)
+                binding.searchInput.setSelection(state.query.length)
+            }
+
+            adapter.submitList(state.posts)
+            binding.emptyText.isVisible = state.isEmpty
+            binding.pbLoading.isVisible = state.isInitialLoading
+            binding.swipeRefresh.isRefreshing = state.isRefreshing
+            binding.pbLoadingMore.isVisible = state.isLoadingMore
         }
 
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.pbLoading.isVisible = isLoading
-            if (!isLoading) binding.swipeRefresh.isRefreshing = false
-        }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                when (action) {
+                    is PostsEvent.NavigateToDetails -> {
+                        val direction = PostsFragmentDirections.actionPostsToDetails(action.postId)
+                        findNavController().navigate(direction)
+                    }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Snackbar.make(binding.root, it.toUserFriendlyMessage(), Snackbar.LENGTH_SHORT).show()
+                    is PostsEvent.NavigateToEdit -> {
+                        val direction = PostsFragmentDirections.actionPostsToEdit(action.postId)
+                        findNavController().navigate(direction)
+                    }
+
+                    is PostsEvent.ShowMessage -> {
+                        Snackbar.make(binding.root, getString(action.messageRes), Snackbar.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
 
     override fun onDestroyView() {
+        binding.recyclerView.adapter = null
         super.onDestroyView()
         _binding = null
     }

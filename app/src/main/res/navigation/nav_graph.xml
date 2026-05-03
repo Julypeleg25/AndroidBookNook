@@ -41,7 +41,7 @@
         android:name="com.booknook.app.ui.posts.PostsFragment"
         android:label="Feed">
         <action android:id="@+id/action_posts_to_bookSearch" app:destination="@id/bookSearchFragment" />
-        <action android:id="@+id/action_posts_to_wishlist" app:destination="@id/wishlistFragment" />
+        <action android:id="@+id/action_posts_to_myLists" app:destination="@id/myListsFragment" />
         <action android:id="@+id/action_posts_to_profile" app:destination="@id/profileFragment" />
         <action android:id="@+id/action_posts_to_details" app:destination="@id/postDetailsFragment" />
         <action android:id="@+id/action_posts_to_myPosts" app:destination="@id/myPostsFragment" />
@@ -93,8 +93,8 @@
     </fragment>
 
     <fragment
-        android:id="@+id/wishlistFragment"
-        android:name="com.booknook.app.ui.wishlist.WishlistFragment"
+        android:id="@+id/myListsFragment"
+        android:name="com.booknook.app.ui.lists.MyListsFragment"
         android:label="My Lists" />
 
     <fragment
