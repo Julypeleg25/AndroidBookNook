@@ -14,12 +14,14 @@ private interface GoogleBooksApi {
     suspend fun search(
         @Query("q") q: String,
         @Query("startIndex") startIndex: Int = 0,
-        @Query("maxResults") maxResults: Int = 40
+        @Query("maxResults") maxResults: Int = 40,
+        @Query("key") apiKey: String? = null
     ): SearchResponseDto
 
     @GET("volumes/{volumeId}")
     suspend fun getVolume(
-        @Path("volumeId") volumeId: String
+        @Path("volumeId") volumeId: String,
+        @Query("key") apiKey: String? = null
     ): BookDto
 }
 
@@ -42,14 +44,22 @@ class ApiModel {
         if (normalizedQuery.isBlank()) return emptyList()
 
         com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $normalizedQuery (startIndex: $startIndex)")
-        val res = api.search(normalizedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
+        val res = api.search(
+            q = normalizedQuery,
+            startIndex = startIndex,
+            maxResults = MAX_RESULTS_PER_PAGE,
+            apiKey = GoogleBooksConfig.apiKeyOrNull()
+        )
         val items = res.items ?: return emptyList()
         return items.mapNotNull { dto -> dto.toDomainBookOrNull() }
     }
 
     suspend fun getBook(volumeId: String): Book? {
         if (volumeId.isBlank()) return null
-        return api.getVolume(volumeId).toDomainBookOrNull()
+        return api.getVolume(
+            volumeId = volumeId,
+            apiKey = GoogleBooksConfig.apiKeyOrNull()
+        ).toDomainBookOrNull()
     }
 }
 
