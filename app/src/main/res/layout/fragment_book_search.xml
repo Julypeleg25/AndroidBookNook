@@ -143,6 +143,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/clearSearchBtn" />
 
+    <ProgressBar
+        android:id="@+id/pbLoadingMore"
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="8dp"
+        android:indeterminateTint="@color/bn_orange"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
         android:layout_width="match_parent"
@@ -150,7 +162,7 @@
         android:layout_marginTop="16dp"
         android:clipToPadding="false"
         android:paddingVertical="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/pbLoadingMore"
         app:layout_constraintTop_toBottomOf="@id/clearSearchBtn" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

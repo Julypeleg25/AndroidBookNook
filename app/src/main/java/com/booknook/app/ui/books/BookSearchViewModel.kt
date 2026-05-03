@@ -1,12 +1,17 @@
 package com.booknook.app.ui.books
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.booknook.app.R
 import com.booknook.app.data.repository.BooksRepository
 import com.booknook.app.model.Book
+import com.booknook.app.util.Event
+import com.booknook.app.util.Logger
+import com.booknook.app.util.toUserFriendlyMessageRes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -15,67 +20,69 @@ class BookSearchViewModel(
     private val booksRepository: BooksRepository
 ) : ViewModel() {
 
-    private val _loading = MutableLiveData(false)
-    val loading: LiveData<Boolean> = _loading
+    private val _uiState = MutableLiveData(BookSearchUiState())
+    val uiState: LiveData<BookSearchUiState> = _uiState
 
-    private val _loadingMore = MutableLiveData(false)
-
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
-
-    private val _searchResults = MutableLiveData<List<Book>>(emptyList())
-    val searchResults: LiveData<List<Book>> = _searchResults
-
-    private val _isEmpty = MutableLiveData(false)
-    val isEmpty: LiveData<Boolean> = _isEmpty
+    private val _event = MutableLiveData<Event<BookSearchEvent>>()
+    val event: LiveData<Event<BookSearchEvent>> = _event
 
     private var currentQuery: String = ""
     private var startIndex = 0
     private var canLoadMore = true
     private var searchJob: Job? = null
 
-    fun searchBooks(query: String) {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) {
+    fun onQueryChanged(query: String) {
+        if (_uiState.value?.query == query) return
+        _uiState.value = _uiState.value?.copy(query = query)
+        if (query.isBlank() && _uiState.value?.hasSearched == true) {
             clearSearch()
+        }
+    }
+
+    fun onSearchRequested() {
+        val trimmedQuery = _uiState.value?.query?.trim().orEmpty()
+        if (trimmedQuery.isEmpty()) {
+            _event.value = Event(BookSearchEvent.ShowMessage(R.string.search_query_required))
             return
         }
 
-        if (trimmed == currentQuery) return
-
-        prepareNewSearch(trimmed)
-
+        prepareSearch(trimmedQuery)
         searchJob = viewModelScope.launch {
             try {
-                setInitialLoading()
                 val books = booksRepository.searchBooks(currentQuery, startIndex)
                 applyInitialResults(books)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e)
-            } finally {
-                _loading.value = false
+                _uiState.value = _uiState.value?.copy(isInitialLoading = false)
+                _event.value = Event(BookSearchEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.search_failed)))
             }
         }
     }
 
     fun loadMore() {
-        if (_loading.value == true || _loadingMore.value == true || !canLoadMore || currentQuery.isEmpty()) return
+        val state = _uiState.value ?: return
+        if (!canLoadMore || currentQuery.isEmpty() || state.isInitialLoading || state.isLoadingMore || state.isEndReached) {
+            return
+        }
 
         viewModelScope.launch {
             try {
-                _loadingMore.value = true
+                _uiState.value = _uiState.value?.copy(isLoadingMore = true)
                 val books = booksRepository.searchBooks(currentQuery, startIndex)
                 applyMoreResults(books)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _error.value = mapErrorMessage(e)
-            } finally {
-                _loadingMore.value = false
+                Logger.e("BookSearch", "Failed to load more books", e)
+                _uiState.value = _uiState.value?.copy(isLoadingMore = false)
+                _event.value = Event(BookSearchEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.search_failed)))
             }
         }
+    }
+
+    fun onBookSelected(book: Book) {
+        _event.value = Event(BookSearchEvent.NavigateToCreatePost(book))
     }
 
     fun clearSearch() {
@@ -83,51 +90,43 @@ class BookSearchViewModel(
         currentQuery = ""
         startIndex = 0
         canLoadMore = true
-        _loading.value = false
-        _loadingMore.value = false
-        _error.value = null
-        _searchResults.value = emptyList()
-        _isEmpty.value = false
+        _uiState.value = BookSearchUiState()
     }
 
-    private fun prepareNewSearch(query: String) {
+    private fun prepareSearch(query: String) {
         searchJob?.cancel()
         currentQuery = query
         startIndex = 0
         canLoadMore = true
-        _searchResults.value = emptyList()
-    }
-
-    private fun setInitialLoading() {
-        _loading.value = true
-        _error.value = null
-        _isEmpty.value = false
+        _uiState.value = BookSearchUiState(
+            query = query,
+            isInitialLoading = true,
+            hasSearched = true
+        )
     }
 
     private fun applyInitialResults(books: List<Book>) {
-        _searchResults.value = books
-        _isEmpty.value = books.isEmpty()
         startIndex = books.size
         canLoadMore = books.isNotEmpty()
+        _uiState.value = _uiState.value?.copy(
+            results = books,
+            isInitialLoading = false,
+            isEmpty = books.isEmpty(),
+            isEndReached = books.isEmpty()
+        )
     }
 
     private fun applyMoreResults(books: List<Book>) {
-        if (books.isNotEmpty()) {
-            val currentBooks = _searchResults.value.orEmpty()
-            _searchResults.value = (currentBooks + books).distinctBy { it.id }
-            startIndex += books.size
-        }
+        val currentBooks = _uiState.value?.results.orEmpty()
+        val mergedBooks = (currentBooks + books).distinctBy { it.id }
+        startIndex += books.size
         canLoadMore = books.isNotEmpty()
-    }
-
-    private fun mapErrorMessage(e: Exception): String {
-        val msg = e.message ?: return "Search failed"
-        return when {
-            msg.contains("network", ignoreCase = true) || msg.contains("offline", ignoreCase = true) ->
-                "Device is offline. Please check your connection."
-            msg.contains("Timed out", ignoreCase = true) -> "Connection timed out."
-            else -> msg
-        }
+        _uiState.value = _uiState.value?.copy(
+            results = mergedBooks,
+            isLoadingMore = false,
+            isEmpty = mergedBooks.isEmpty(),
+            isEndReached = books.isEmpty()
+        )
     }
 
     companion object {
@@ -143,4 +142,19 @@ class BookSearchViewModel(
             }
         }
     }
+}
+
+data class BookSearchUiState(
+    val query: String = "",
+    val results: List<Book> = emptyList(),
+    val isInitialLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val hasSearched: Boolean = false,
+    val isEmpty: Boolean = false,
+    val isEndReached: Boolean = false
+)
+
+sealed interface BookSearchEvent {
+    data class NavigateToCreatePost(val book: Book) : BookSearchEvent
+    data class ShowMessage(@StringRes val messageRes: Int) : BookSearchEvent
 }
