@@ -74,11 +74,11 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 !state.user?.avatarUrl.isNullOrBlank() -> {
                     binding.avatarImage.loadRemoteImage(
                         state.user?.avatarUrl,
-                        R.drawable.ic_launcher_foreground
+                        R.drawable.ic_default_avatar
                     )
                 }
 
-                else -> binding.avatarImage.setImageResource(R.drawable.ic_launcher_foreground)
+                else -> binding.avatarImage.setImageResource(R.drawable.ic_default_avatar)
             }
 
             val isBusy = state.isSaving || state.isLoggingOut

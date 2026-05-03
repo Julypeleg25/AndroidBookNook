@@ -20,7 +20,8 @@ class PostsViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    val currentUserId: String? = authRepository.currentUserId()
+    var currentUserId: String? = authRepository.currentUserId()
+        private set
 
     private val _uiState = MediatorLiveData(PostsUiState(currentUserId = currentUserId))
     val uiState: LiveData<PostsUiState> = _uiState
@@ -28,13 +29,27 @@ class PostsViewModel(
     private val _event = MutableLiveData<Event<PostsEvent>>()
     val event: LiveData<Event<PostsEvent>> = _event
 
-    private val allPostsSource = postsRepository.observePosts(currentUserId.orEmpty())
+    private var allPostsSource: LiveData<List<PostEntity>> = postsRepository.observePosts(currentUserId.orEmpty())
     private var activePostsSource: LiveData<List<PostEntity>>? = null
     private var isLikeProcessing = false
 
     init {
-        observePostsSource(allPostsSource)
-        refreshPosts(isUserInitiated = false)
+        bindPostsSource(currentUserId)
+        if (currentUserId != null) {
+            refreshPosts(isUserInitiated = false)
+        }
+
+        viewModelScope.launch {
+            authRepository.authState
+                .collect { userId ->
+                    if (userId == currentUserId) return@collect
+                    currentUserId = userId
+                    bindPostsSource(userId)
+                    if (userId != null) {
+                        refreshPosts(isUserInitiated = false)
+                    }
+                }
+        }
     }
 
     fun refreshPosts(isUserInitiated: Boolean = true) {
@@ -151,6 +166,12 @@ class PostsViewModel(
                 isEmpty = posts.isEmpty() && !currentState.isInitialLoading && !currentState.isRefreshing
             )
         }
+    }
+
+    private fun bindPostsSource(userId: String?) {
+        _uiState.value = PostsUiState(currentUserId = userId)
+        allPostsSource = postsRepository.observePosts(userId.orEmpty())
+        observePostsSource(allPostsSource)
     }
 
     companion object {

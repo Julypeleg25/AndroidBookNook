@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -30,6 +31,8 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
     private var pickedImage: Uri? = null
     private lateinit var postId: String
     private var hasInitializedForm = false
+    private var initialRating = 0
+    private var initialReview = ""
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -37,6 +40,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
             binding.imageCard.isVisible = true
             binding.imageRequiredHint.isVisible = false
             Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
+            updateSaveButton()
         }
     }
 
@@ -50,11 +54,18 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         binding.bookHeader.text = getString(R.string.edit_post_book_header)
         binding.bookSubtitle.text = getString(R.string.edit_post_book_subtitle)
         binding.imageRequiredHint.isVisible = false
+        binding.publishBtn.isEnabled = false
 
         observeViewModel()
         viewModel.loadPost(postId)
 
         binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
+        binding.ratingBar.setOnRatingBarChangeListener { _, _, _ ->
+            updateSaveButton()
+        }
+        binding.reviewInput.doAfterTextChanged {
+            updateSaveButton()
+        }
 
         binding.publishBtn.setOnClickListener {
             val rating = binding.ratingBar.rating.toInt()
@@ -71,13 +82,15 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             val isBusy = state.isSaving || state.isLoadingPost
             binding.loading.isVisible = isBusy
-            binding.publishBtn.isEnabled = !isBusy
+            updateSaveButton(isBusy)
 
             val post = state.post ?: return@observe
 
             if (!hasInitializedForm) {
                 binding.ratingBar.rating = post.rating.toFloat()
                 binding.reviewInput.setText(post.review)
+                initialRating = post.rating
+                initialReview = post.review.trim()
 
                 BookInfoCardBinder.bind(
                     binding.bookInfoPanel,
@@ -92,6 +105,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
                     )
                 )
                 hasInitializedForm = true
+                updateSaveButton(isBusy)
             }
 
             val existingImageUrl = post.imageUrl.nullIfBlank()
@@ -115,6 +129,16 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
                 }
             }
         }
+    }
+
+    private fun updateSaveButton(isBusy: Boolean = viewModel.uiState.value?.isSaving == true || viewModel.uiState.value?.isLoadingPost == true) {
+        binding.publishBtn.isEnabled = !isBusy && hasInitializedForm && hasFormChanged()
+    }
+
+    private fun hasFormChanged(): Boolean {
+        val currentRating = binding.ratingBar.rating.toInt()
+        val currentReview = binding.reviewInput.text?.toString()?.trim().orEmpty()
+        return currentRating != initialRating || currentReview != initialReview || pickedImage != null
     }
 
     override fun onDestroyView() {

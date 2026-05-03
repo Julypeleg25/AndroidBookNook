@@ -11,9 +11,9 @@ import com.booknook.app.R
 import com.booknook.app.base.MyApplication
 import com.booknook.app.data.local.entities.PostEntity
 import com.booknook.app.databinding.FragmentPostDetailsBinding
+import com.booknook.app.util.displayPostImageUrl
 import com.booknook.app.util.formatRelativeTime
 import com.booknook.app.util.loadRemoteImage
-import com.booknook.app.util.nullIfBlank
 import com.google.android.material.snackbar.Snackbar
 
 class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
@@ -94,7 +94,7 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
         renderListButtons(state)
         commentsAdapter.submitList(state.comments)
         renderBookInfo(state.bookInfo)
-        state.post?.let { post -> renderPost(post, state) }
+        state.post?.let { post -> renderPost(post, state) } ?: clearPost()
     }
 
     private fun renderLoadingState(state: PostDetailsUiState) {
@@ -105,8 +105,11 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
     }
 
     private fun renderListButtons(state: PostDetailsUiState) {
-        binding.addWishlistBtn.isEnabled = !state.isActionProcessing
-        binding.addReadlistBtn.isEnabled = !state.isActionProcessing
+        val canManageLists = state.canManageLists && !state.isActionProcessing
+        binding.addWishlistBtn.isEnabled = canManageLists
+        binding.addReadlistBtn.isEnabled = canManageLists
+        binding.addWishlistBtn.alpha = if (canManageLists) ENABLED_ALPHA else DISABLED_ALPHA
+        binding.addReadlistBtn.alpha = if (canManageLists) ENABLED_ALPHA else DISABLED_ALPHA
         binding.addWishlistBtn.setIconResource(state.wishlistIconRes)
         binding.addReadlistBtn.setIconResource(state.readlistIconRes)
     }
@@ -114,6 +117,14 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
     private fun renderBookInfo(bookInfo: BookInfoCardModel?) {
         if (bookInfo == null) {
             lastBoundBookInfo = null
+            binding.bookInfoPanel.bookThumb.setImageResource(R.drawable.book_placeholder)
+            binding.bookInfoPanel.bookTitle.text = ""
+            binding.bookInfoPanel.bookAuthor.text = ""
+            binding.bookInfoPanel.bookGenre.text = ""
+            binding.bookInfoPanel.bookGenre.isVisible = false
+            binding.bookInfoPanel.bookMeta.text = ""
+            binding.bookInfoPanel.bookDescription.text = ""
+            binding.bookInfoPanel.bookDescriptionToggle.isVisible = false
             return
         }
         if (bookInfo == lastBoundBookInfo) return
@@ -135,8 +146,21 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
         binding.postImage.loadRemoteImage(post.displayImageUrl, R.drawable.book_placeholder)
     }
 
+    private fun clearPost() {
+        binding.title.text = ""
+        binding.author.text = ""
+        binding.rating.rating = 0f
+        binding.review.text = ""
+        binding.meta.text = ""
+        binding.likeBtn.text = getString(R.string.post_like_button_initial)
+        binding.likeBtn.setIconResource(R.drawable.ic_heart_outline)
+        binding.editBtn.isVisible = false
+        binding.postImage.setImageResource(R.drawable.book_placeholder)
+        binding.commentInput.setText("")
+    }
+
     private fun renderLikeButton(state: PostDetailsUiState) {
-        val canLike = !state.isActionProcessing && !state.canEdit
+        val canLike = state.post != null && !state.isActionProcessing && !state.canEdit
         binding.likeBtn.isEnabled = canLike
         binding.likeBtn.alpha = if (canLike) ENABLED_ALPHA else DISABLED_ALPHA
     }
@@ -173,7 +197,7 @@ class PostDetailsFragment : Fragment(R.layout.fragment_post_details) {
         get() = if (isLikedByUser) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
 
     private val PostEntity.displayImageUrl: String?
-        get() = imageUrl.nullIfBlank() ?: bookThumbnail
+        get() = displayPostImageUrl
 
     private val PostEntity.metaText: String
         get() = getString(

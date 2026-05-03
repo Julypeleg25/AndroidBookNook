@@ -22,12 +22,14 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     private val binding get() = _binding!!
     private val app get() = requireActivity().application as MyApplication
     private val viewModel: BookSearchViewModel by viewModels {
-        BookSearchViewModel.factory(app.booksRepository)
+        BookSearchViewModel.factory(
+            booksRepository = app.booksRepository,
+            authRepository = app.authRepository
+        )
     }
-    private var hasSearched = false
 
     private val adapter = BookAdapter { book ->
-        navigateToCreatePost(book)
+        viewModel.onBookSelected(book)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -50,7 +52,7 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
         return object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-                if (dy > 0 && layoutManager.isScrolledToEnd()) {
+                if (dy > 0 && layoutManager.isNearEnd()) {
                     viewModel.loadMore()
                 }
             }
@@ -58,83 +60,63 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
     }
 
     private fun setupActions() {
-        binding.doSearchBtn.setOnClickListener { performSearch() }
-        binding.clearSearchBtn.setOnClickListener { clearSearchUi() }
-
+        binding.doSearchBtn.setOnClickListener {
+            viewModel.onSearchRequested()
+        }
+        binding.clearSearchBtn.setOnClickListener {
+            viewModel.clearSearch()
+        }
         binding.queryInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                performSearch()
+                viewModel.onSearchRequested()
                 true
-            } else false
-        }
-
-        binding.queryInput.doAfterTextChanged { text ->
-            val hasText = !text.isNullOrBlank()
-            binding.clearSearchBtn.isVisible = hasText || hasSearched
-            if (!hasText && hasSearched) {
-                clearSearchUi()
+            } else {
+                false
             }
         }
-    }
-
-    private fun performSearch() {
-        val query = binding.queryInput.text.toString().trim()
-        if (query.isNotEmpty()) {
-            hasSearched = true
-            binding.welcomeGroup.isVisible = false
-            viewModel.searchBooks(query)
-        } else {
-            showMessage("Enter a search query")
+        binding.queryInput.doAfterTextChanged { text ->
+            viewModel.onQueryChanged(text?.toString().orEmpty())
         }
     }
 
     private fun observeViewModel() {
-        viewModel.searchResults.observe(viewLifecycleOwner) { books ->
-            adapter.submitList(books)
-            binding.recycler.isVisible = books.isNotEmpty()
-            binding.welcomeGroup.isVisible = !hasSearched
-            binding.emptyText.isVisible = hasSearched && books.isEmpty() && viewModel.loading.value != true
-            binding.clearSearchBtn.isVisible = binding.queryInput.text?.isNotBlank() == true || hasSearched
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            renderState(state)
         }
 
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loading.isVisible = isLoading
-            if (isLoading) {
-                binding.welcomeGroup.isVisible = false
-                binding.emptyText.isVisible = false
-            }
-        }
-
-        viewModel.isEmpty.observe(viewLifecycleOwner) { empty ->
-            binding.emptyText.isVisible = empty && hasSearched
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                showMessage(it)
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { action ->
+                handleEvent(action)
             }
         }
     }
 
-    override fun onDestroyView() {
-        viewModel.clearSearch()
-        hasSearched = false
-        super.onDestroyView()
-        _binding = null
+    private fun renderState(state: BookSearchUiState) {
+        updateQueryInput(state.query)
+        adapter.submitList(state.results)
+        binding.recycler.isVisible = state.results.isNotEmpty()
+        binding.loading.isVisible = state.isInitialLoading
+        binding.pbLoadingMore.isVisible = state.isLoadingMore
+        binding.welcomeGroup.isVisible = !state.hasSearched && !state.isInitialLoading
+        binding.emptyText.isVisible = state.hasSearched && state.isEmpty && !state.isInitialLoading
+        binding.clearSearchBtn.isVisible = state.query.isNotBlank() || state.hasSearched
     }
 
-    private fun clearSearchUi() {
-        viewModel.clearSearch()
-        hasSearched = false
-        binding.queryInput.setText("")
-        binding.recycler.isVisible = false
-        binding.emptyText.isVisible = false
-        binding.welcomeGroup.isVisible = true
-        binding.clearSearchBtn.isVisible = false
+    private fun updateQueryInput(query: String) {
+        if (binding.queryInput.text?.toString() == query) return
+        binding.queryInput.setText(query)
+        binding.queryInput.setSelection(query.length)
+    }
+
+    private fun handleEvent(event: BookSearchEvent) {
+        when (event) {
+            is BookSearchEvent.NavigateToCreatePost -> navigateToCreatePost(event.book)
+            is BookSearchEvent.ShowMessage -> showMessage(event.messageRes)
+        }
     }
 
     private fun navigateToCreatePost(book: Book) {
-        val action = BookSearchFragmentDirections.actionBookSearchToCreatePost(
+        val direction = BookSearchFragmentDirections.actionBookSearchToCreatePost(
             bookId = book.id,
             bookTitle = book.title,
             bookAuthor = book.author,
@@ -144,15 +126,26 @@ class BookSearchFragment : Fragment(R.layout.fragment_book_search) {
             bookPageCount = book.pageCount ?: -1,
             bookDescription = book.description
         )
-        findNavController().navigate(action)
+        findNavController().navigate(direction)
     }
 
-    private fun showMessage(message: String) {
-        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+    private fun showMessage(messageRes: Int) {
+        Snackbar.make(binding.root, getString(messageRes), Snackbar.LENGTH_SHORT).show()
     }
 
-    private fun LinearLayoutManager.isScrolledToEnd(): Boolean {
+    override fun onDestroyView() {
+        binding.recycler.adapter = null
+        super.onDestroyView()
+        _binding = null
+    }
+
+    private fun LinearLayoutManager.isNearEnd(): Boolean {
         val firstVisiblePosition = findFirstVisibleItemPosition()
-        return firstVisiblePosition >= 0 && childCount + firstVisiblePosition >= itemCount
+        return firstVisiblePosition >= 0 &&
+            childCount + firstVisiblePosition >= itemCount - LOAD_MORE_THRESHOLD
+    }
+
+    companion object {
+        private const val LOAD_MORE_THRESHOLD = 5
     }
 }

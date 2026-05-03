@@ -26,7 +26,8 @@ class PostDetailsViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    val currentUserId: String? = authRepository.currentUserId()
+    var currentUserId: String? = authRepository.currentUserId()
+        private set
 
     private val _uiState = MediatorLiveData(PostDetailsUiState(currentUserId = currentUserId))
     val uiState: LiveData<PostDetailsUiState> = _uiState
@@ -41,17 +42,30 @@ class PostDetailsViewModel(
     private var commentsSource: LiveData<List<CommentEntity>>? = null
     private var wishlistSource: LiveData<Boolean>? = null
     private var readlistSource: LiveData<Boolean>? = null
+    private var isWishlistLoaded = false
+    private var isReadlistLoaded = false
 
     init {
         _uiState.value = PostDetailsUiState(currentUserId = currentUserId)
+
+        viewModelScope.launch {
+            authRepository.authState
+                .collect { userId ->
+                    if (userId == currentUserId) return@collect
+                    currentUserId = userId
+                    resetTransientState()
+                    if (userId != null) {
+                        currentPostId?.let { loadPost(it, force = true) }
+                    }
+                }
+        }
     }
 
-    fun loadPost(postId: String) {
-        if (currentPostId == postId) return
+    fun loadPost(postId: String, force: Boolean = false) {
+        if (!force && currentPostId == postId) return
 
         currentPostId = postId
-        resolvedBook = null
-        resolvedBookId = null
+        resetTransientState()
         postSource?.let { _uiState.removeSource(it) }
         commentsSource?.let { _uiState.removeSource(it) }
 
@@ -116,7 +130,8 @@ class PostDetailsViewModel(
         @StringRes removedMessageRes: Int
     ) {
         val post = _uiState.value?.post ?: return
-        if (_uiState.value?.isActionProcessing == true) return
+        val state = _uiState.value ?: return
+        if (state.isActionProcessing || !state.canManageLists) return
 
         _uiState.value = _uiState.value?.copy(isActionProcessing = true)
         viewModelScope.launch {
@@ -194,24 +209,60 @@ class PostDetailsViewModel(
     private fun observeBookMembership(bookId: String) {
         wishlistSource?.let { _uiState.removeSource(it) }
         readlistSource?.let { _uiState.removeSource(it) }
+        isWishlistLoaded = false
+        isReadlistLoaded = false
 
         val userId = currentUserId
         if (userId == null) {
-            _uiState.value = _uiState.value?.copy(isWishlisted = false, isReadlisted = false)
+            _uiState.value = _uiState.value?.copy(
+                isWishlisted = false,
+                isReadlisted = false,
+                isListsReady = false
+            )
             return
         }
 
+        _uiState.value = _uiState.value?.copy(
+            isWishlisted = false,
+            isReadlisted = false,
+            isListsReady = false
+        )
+
         wishlistSource = listsRepository.observeWishlistExists(userId, bookId).also { source ->
             _uiState.addSource(source) { isWishlisted ->
-                _uiState.value = _uiState.value?.copy(isWishlisted = isWishlisted)
+                isWishlistLoaded = true
+                _uiState.value = _uiState.value?.copy(
+                    isWishlisted = isWishlisted,
+                    isListsReady = isWishlistLoaded && isReadlistLoaded
+                )
             }
         }
 
         readlistSource = listsRepository.observeReadlistExists(userId, bookId).also { source ->
             _uiState.addSource(source) { isReadlisted ->
-                _uiState.value = _uiState.value?.copy(isReadlisted = isReadlisted)
+                isReadlistLoaded = true
+                _uiState.value = _uiState.value?.copy(
+                    isReadlisted = isReadlisted,
+                    isListsReady = isWishlistLoaded && isReadlistLoaded
+                )
             }
         }
+    }
+
+    private fun resetTransientState() {
+        resolvedBook = null
+        resolvedBookId = null
+        isWishlistLoaded = false
+        isReadlistLoaded = false
+        postSource?.let { _uiState.removeSource(it) }
+        commentsSource?.let { _uiState.removeSource(it) }
+        wishlistSource?.let { _uiState.removeSource(it) }
+        readlistSource?.let { _uiState.removeSource(it) }
+        postSource = null
+        commentsSource = null
+        wishlistSource = null
+        readlistSource = null
+        _uiState.value = PostDetailsUiState(currentUserId = currentUserId)
     }
 
     private fun PostEntity.toBook(): Book {
@@ -273,8 +324,12 @@ data class PostDetailsUiState(
     val isCommentProcessing: Boolean = false,
     val isWishlisted: Boolean = false,
     val isReadlisted: Boolean = false,
+    val isListsReady: Boolean = false,
     val canEdit: Boolean = false
-)
+) {
+    val canManageLists: Boolean
+        get() = currentUserId != null && !canEdit && post != null && isListsReady
+}
 
 sealed interface PostDetailsEvent {
     data class NavigateToEdit(val postId: String) : PostDetailsEvent

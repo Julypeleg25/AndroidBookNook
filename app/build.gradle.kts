@@ -34,6 +34,7 @@ android {
 
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", buildConfigString("cloudinaryCloudName", "doerkga0h"))
         buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", buildConfigString("cloudinaryUploadPreset", ""))
+        buildConfigField("String", "GOOGLE_BOOKS_API_KEY", buildConfigString("googleBooksApiKey", ""))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

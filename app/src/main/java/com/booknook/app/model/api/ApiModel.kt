@@ -14,12 +14,14 @@ private interface GoogleBooksApi {
     suspend fun search(
         @Query("q") q: String,
         @Query("startIndex") startIndex: Int = 0,
-        @Query("maxResults") maxResults: Int = 40
+        @Query("maxResults") maxResults: Int = 40,
+        @Query("key") apiKey: String? = null
     ): SearchResponseDto
 
     @GET("volumes/{volumeId}")
     suspend fun getVolume(
-        @Path("volumeId") volumeId: String
+        @Path("volumeId") volumeId: String,
+        @Query("key") apiKey: String? = null
     ): BookDto
 }
 
@@ -38,31 +40,42 @@ class ApiModel {
     }
 
     suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> {
-        val q = query.lowercase().trim()
-        if (q.isBlank()) return emptyList()
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) return emptyList()
 
-        val refinedQuery = q
-        com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $refinedQuery (startIndex: $startIndex)")
-        val res = api.search(refinedQuery, startIndex = startIndex, maxResults = MAX_RESULTS_PER_PAGE)
+        com.booknook.app.util.Logger.d("GoogleBooks", "Search query: $normalizedQuery (startIndex: $startIndex)")
+        val res = api.search(
+            q = normalizedQuery,
+            startIndex = startIndex,
+            maxResults = MAX_RESULTS_PER_PAGE,
+            apiKey = GoogleBooksConfig.apiKeyOrNull()
+        )
         val items = res.items ?: return emptyList()
-        return items.map { dto -> dto.toDomainBook() }
+        return items.mapNotNull { dto -> dto.toDomainBookOrNull() }
     }
 
     suspend fun getBook(volumeId: String): Book? {
         if (volumeId.isBlank()) return null
-        return api.getVolume(volumeId).toDomainBook()
+        return api.getVolume(
+            volumeId = volumeId,
+            apiKey = GoogleBooksConfig.apiKeyOrNull()
+        ).toDomainBookOrNull()
     }
 }
 
-private fun BookDto.toDomainBook(): Book {
+private fun BookDto.toDomainBookOrNull(): Book? {
+    val normalizedId = id.trim()
+    val info = volumeInfo ?: return null
+    if (normalizedId.isEmpty()) return null
+
     return Book(
-        id = id,
-        title = volumeInfo.title ?: "",
-        author = volumeInfo.authors?.joinToString(", ") ?: "",
-        thumbnail = volumeInfo.imageLinks?.thumbnail?.replace("http://", "https://"),
-        publishedDate = volumeInfo.publishedDate,
-        genre = volumeInfo.categories?.joinToString(", "),
-        pageCount = volumeInfo.pageCount,
-        description = volumeInfo.description
+        id = normalizedId,
+        title = info.title ?: "",
+        author = info.authors?.joinToString(", ") ?: "",
+        thumbnail = info.imageLinks?.thumbnail?.replace("http://", "https://"),
+        publishedDate = info.publishedDate,
+        genre = info.categories?.joinToString(", "),
+        pageCount = info.pageCount,
+        description = info.description
     )
 }

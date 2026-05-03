@@ -13,21 +13,20 @@ class BooksRepository(
     private val api: ApiModel
 ) {
     suspend fun searchBooks(query: String, startIndex: Int = 0): List<Book> {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) return emptyList()
+
         return try {
-            val books = api.searchBooks(query, startIndex)
-            withContext(Dispatchers.IO) {
-                local.cacheBooks(books.map { it.toCachedEntity() })
+            val remoteBooks = api.searchBooks(normalizedQuery, startIndex)
+            if (remoteBooks.isNotEmpty()) {
+                cacheBooks(remoteBooks)
+                remoteBooks
+            } else {
+                searchCachedBooks(normalizedQuery, startIndex)
             }
-            books
         } catch (e: Exception) {
-            Logger.e("Books", "Remote search failed. Falling back to cache.", e)
-            withContext(Dispatchers.IO) {
-                local.searchCachedBooks(
-                    query = query.trim(),
-                    limit = ApiModel.MAX_RESULTS_PER_PAGE,
-                    offset = startIndex
-                ).map { it.toDomainBook() }
-            }
+            Logger.e("Books", "Remote search failed for \"$normalizedQuery\". Falling back to cache.", e)
+            searchCachedBooks(normalizedQuery, startIndex)
         }
     }
 
@@ -35,9 +34,7 @@ class BooksRepository(
         return try {
             val book = api.getBook(bookId)
             if (book != null) {
-                withContext(Dispatchers.IO) {
-                    local.cacheBooks(listOf(book.toCachedEntity()))
-                }
+                cacheBooks(listOf(book))
             }
             book
         } catch (e: Exception) {
@@ -45,6 +42,22 @@ class BooksRepository(
             withContext(Dispatchers.IO) {
                 local.getCachedBook(bookId)?.toDomainBook()
             }
+        }
+    }
+
+    private suspend fun cacheBooks(books: List<Book>) {
+        withContext(Dispatchers.IO) {
+            local.cacheBooks(books.map { it.toCachedEntity() })
+        }
+    }
+
+    private suspend fun searchCachedBooks(query: String, startIndex: Int): List<Book> {
+        return withContext(Dispatchers.IO) {
+            local.searchCachedBooks(
+                query = query,
+                limit = ApiModel.MAX_RESULTS_PER_PAGE,
+                offset = startIndex
+            ).map { it.toDomainBook() }
         }
     }
 }

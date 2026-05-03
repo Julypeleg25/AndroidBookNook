@@ -28,6 +28,7 @@ class ProfileViewModel(
     val event: LiveData<Event<ProfileEvent>> = _event
 
     private var currentUser: UserEntity? = null
+    private var currentUserId: String? = authRepository.currentUserId()
     private var draftUsername: String = ""
     private var selectedAvatarUri: Uri? = null
 
@@ -54,6 +55,18 @@ class ProfileViewModel(
                 com.booknook.app.util.Logger.e("ProfileVM", "Failed to refresh local profile", e)
                 _event.value = Event(ProfileEvent.ShowMessage(e.toUserFriendlyMessageRes(R.string.profile_update_failed)))
             }
+        }
+
+        viewModelScope.launch {
+            authRepository.authState
+                .collect { userId ->
+                    if (userId == currentUserId) return@collect
+                    currentUserId = userId
+                    resetForAuthChange()
+                    if (userId != null) {
+                        runCatching { profileRepository.refreshProfile() }
+                    }
+                }
         }
     }
 
@@ -126,6 +139,13 @@ class ProfileViewModel(
             isLoggingOut = _uiState.value?.isLoggingOut == true,
             canSave = hasChanges
         )
+    }
+
+    private fun resetForAuthChange() {
+        currentUser = null
+        draftUsername = ""
+        selectedAvatarUri = null
+        publishState()
     }
 
     companion object {

@@ -16,19 +16,29 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.WriteBatch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class FirebaseModel {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val authUserId = MutableStateFlow(auth.currentUser?.uid)
+
+    init {
+        auth.addAuthStateListener { firebaseAuth ->
+            authUserId.value = firebaseAuth.currentUser?.uid
+        }
+    }
 
     fun currentUserId(): String? = auth.currentUser?.uid
     fun requireUserId(): String = currentUserId() ?: throw IllegalStateException("Not logged in")
+    fun observeAuthUserId(): StateFlow<String?> = authUserId
 
     fun logout() { auth.signOut() }
 

@@ -18,7 +18,7 @@ class ListsRepository(
     fun observeWishlist(userId: String): LiveData<List<WishlistEntity>> = local.observeWishlist(userId)
 
     fun observeWishlistExists(userId: String, bookId: String): LiveData<Boolean> {
-        return local.observeWishlistExists("$userId|$bookId")
+        return local.observeWishlistExists(userId, bookId)
     }
 
     suspend fun refreshLists(userId: String) = coroutineScope {
@@ -106,7 +106,7 @@ class ListsRepository(
     fun observeReadlist(userId: String): LiveData<List<ReadlistEntity>> = local.observeReadlist(userId)
 
     fun observeReadlistExists(userId: String, bookId: String): LiveData<Boolean> {
-        return local.observeReadlistExists("$userId|$bookId")
+        return local.observeReadlistExists(userId, bookId)
     }
 
     suspend fun toggleReadlist(userId: String, book: Book): Boolean {
