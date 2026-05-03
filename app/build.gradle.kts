@@ -70,31 +70,22 @@ dependencies {
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
 
-    // Room
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
-    implementation(libs.room.paging)
-    implementation(libs.paging.runtime)
 
-    // Retrofit
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
 
-    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // Firebase (BoM)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
 
-    // Cloudinary
-    // Images
     implementation(libs.picasso)
 
-    // SwipeRefresh
     implementation(libs.androidx.swiperefreshlayout)
 
     testImplementation(libs.junit)
