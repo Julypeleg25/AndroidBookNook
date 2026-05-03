@@ -52,8 +52,6 @@ class PostDetailsViewModel(
         currentPostId = postId
         resolvedBook = null
         resolvedBookId = null
-        _uiState.value = _uiState.value?.copy(isContentLoading = true)
-
         postSource?.let { _uiState.removeSource(it) }
         commentsSource?.let { _uiState.removeSource(it) }
 
@@ -62,8 +60,7 @@ class PostDetailsViewModel(
                 val currentState = _uiState.value ?: PostDetailsUiState(currentUserId = currentUserId)
                 _uiState.value = currentState.copy(
                     post = post,
-                    canEdit = post?.userId == currentUserId,
-                    isContentLoading = false
+                    canEdit = post?.userId == currentUserId
                 )
                 if (post != null) {
                     resolveBookInfo(post)
@@ -272,7 +269,6 @@ data class PostDetailsUiState(
     val post: PostEntity? = null,
     val comments: List<CommentEntity> = emptyList(),
     val bookInfo: BookInfoCardModel? = null,
-    val isContentLoading: Boolean = false,
     val isActionProcessing: Boolean = false,
     val isCommentProcessing: Boolean = false,
     val isWishlisted: Boolean = false,
