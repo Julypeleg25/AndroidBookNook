@@ -1,9 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    kotlin("kapt")
+    alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.navigation.safeargs)
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun buildConfigString(name: String, fallback: String): String {
+    val rawValue = localProperties.getProperty(name) ?: fallback
+    val escapedValue = rawValue.replace("\\", "\\\\").replace("\"", "\\\"")
+    return "\"$escapedValue\""
 }
 
 android {
@@ -13,9 +28,12 @@ android {
     defaultConfig {
         applicationId = "com.booknook.app"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", buildConfigString("cloudinaryCloudName", "doerkga0h"))
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", buildConfigString("cloudinaryUploadPreset", ""))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,6 +49,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    lint {
+        disable += "NotificationPermission"
     }
 }
 
@@ -50,12 +72,15 @@ dependencies {
 
     // Room
     implementation(libs.room.runtime)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
+    implementation(libs.paging.runtime)
 
     // Retrofit
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -64,8 +89,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
 
+    // Cloudinary
     // Images
     implementation(libs.picasso)
 
