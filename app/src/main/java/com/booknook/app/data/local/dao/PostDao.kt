@@ -78,7 +78,7 @@ interface PostDao {
     suspend fun deleteByUser(userId: String)
 
     @Query("DELETE FROM posts WHERE userId = :userId AND id NOT IN (:ids)")
-    suspend fun deleteByUserAndIdNotIn(userId: String, ids: List<String>)
+    suspend fun deleteStalePostsForUser(userId: String, ids: List<String>)
 
     @Query("UPDATE posts SET username = :username WHERE userId = :userId")
     suspend fun updateUsernameForUser(userId: String, username: String)

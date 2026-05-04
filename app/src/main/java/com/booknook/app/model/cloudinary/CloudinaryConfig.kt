@@ -7,4 +7,5 @@ object CloudinaryConfig {
     val uploadPreset: String = BuildConfig.CLOUDINARY_UPLOAD_PRESET.trim()
 
     fun isCloudNameConfigured(): Boolean = cloudName.isNotBlank()
+    fun isUploadPresetConfigured(): Boolean = uploadPreset.isNotBlank()
 }

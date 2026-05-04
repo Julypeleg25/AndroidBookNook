@@ -34,7 +34,7 @@ android {
 
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", buildConfigString("cloudinaryCloudName", "doerkga0h"))
         buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", buildConfigString("cloudinaryUploadPreset", ""))
-        buildConfigField("String", "GOOGLE_BOOKS_API_KEY", buildConfigString("googleBooksApiKey", ""))
+        buildConfigField("String", "GOOGLE_BOOKS_API_KEY", buildConfigString("googleBooksApiKey", "AIzaSyAS5thxgNfFMy4kxFygUdzBWLXiFVLrjdY"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -52,9 +52,6 @@ android {
         jvmTarget = "17"
     }
 
-    lint {
-        disable += "NotificationPermission"
-    }
 }
 
 dependencies {

@@ -3,9 +3,10 @@ package com.booknook.app.data.repository
 import androidx.lifecycle.LiveData
 import com.booknook.app.data.local.LocalCacheDataSource
 import com.booknook.app.data.local.entities.ReadlistEntity
+import com.booknook.app.data.local.entities.SavedBookListItem
 import com.booknook.app.data.local.entities.WishlistEntity
 import com.booknook.app.model.Book
-import com.booknook.app.model.firebase.FirebaseModel
+import com.booknook.app.model.firebase.FirebaseListsModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -13,7 +14,7 @@ import kotlinx.coroutines.withContext
 
 class ListsRepository(
     private val local: LocalCacheDataSource,
-    private val firebase: FirebaseModel
+    private val firebase: FirebaseListsModel
 ) {
     fun observeWishlist(userId: String): LiveData<List<WishlistEntity>> = local.observeWishlist(userId)
 
@@ -51,56 +52,24 @@ class ListsRepository(
 
     suspend fun toggleWishlist(userId: String, book: Book): Boolean {
         val key = buildKey(userId, book.id)
-        val newItem = book.toWishlistEntity(userId, key)
-        val existingItem = withContext(Dispatchers.IO) { local.getWishlist(key) }
-        val wasSaved = existingItem != null
-
-        withContext(Dispatchers.IO) {
-            if (wasSaved) {
-                local.deleteWishlist(key)
-            } else {
-                local.upsertWishlist(newItem)
-            }
-        }
-
-        try {
-            if (wasSaved) {
-                firebase.deleteWishlist(userId, book.id)
-            } else {
-                firebase.upsertWishlist(newItem)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.IO) {
-                if (wasSaved) {
-                    local.upsertWishlist(existingItem!!)
-                } else if (!wasSaved) {
-                    local.deleteWishlist(key)
-                }
-            }
-            throw e
-        }
-
-        return !wasSaved
+        return toggleSavedBook(
+            newItem = book.toWishlistEntity(userId, key),
+            getLocal = { local.getWishlist(key) },
+            upsertLocal = { local.upsertWishlist(it) },
+            deleteLocal = { local.deleteWishlist(key) },
+            upsertRemote = { firebase.upsertWishlist(it) },
+            deleteRemote = { firebase.deleteWishlist(userId, book.id) }
+        )
     }
 
     suspend fun removeFromWishlist(userId: String, bookId: String) {
         val key = buildKey(userId, bookId)
-        val existingItem = withContext(Dispatchers.IO) { local.getWishlist(key) }
-
-        withContext(Dispatchers.IO) {
-            local.deleteWishlist(key)
-        }
-
-        try {
-            firebase.deleteWishlist(userId, bookId)
-        } catch (e: Exception) {
-            if (existingItem != null) {
-                withContext(Dispatchers.IO) {
-                    local.upsertWishlist(existingItem)
-                }
-            }
-            throw e
-        }
+        removeSavedBook(
+            getLocal = { local.getWishlist(key) },
+            upsertLocal = { local.upsertWishlist(it) },
+            deleteLocal = { local.deleteWishlist(key) },
+            deleteRemote = { firebase.deleteWishlist(userId, bookId) }
+        )
     }
 
     fun observeReadlist(userId: String): LiveData<List<ReadlistEntity>> = local.observeReadlist(userId)
@@ -111,30 +80,59 @@ class ListsRepository(
 
     suspend fun toggleReadlist(userId: String, book: Book): Boolean {
         val key = buildKey(userId, book.id)
-        val newItem = book.toReadlistEntity(userId, key)
-        val existingItem = withContext(Dispatchers.IO) { local.getReadlist(key) }
+        return toggleSavedBook(
+            newItem = book.toReadlistEntity(userId, key),
+            getLocal = { local.getReadlist(key) },
+            upsertLocal = { local.upsertReadlist(it) },
+            deleteLocal = { local.deleteReadlist(key) },
+            upsertRemote = { firebase.upsertReadlist(it) },
+            deleteRemote = { firebase.deleteReadlist(userId, book.id) }
+        )
+    }
+
+    suspend fun removeFromReadlist(userId: String, bookId: String) {
+        val key = buildKey(userId, bookId)
+        removeSavedBook(
+            getLocal = { local.getReadlist(key) },
+            upsertLocal = { local.upsertReadlist(it) },
+            deleteLocal = { local.deleteReadlist(key) },
+            deleteRemote = { firebase.deleteReadlist(userId, bookId) }
+        )
+    }
+
+    private fun buildKey(userId: String, bookId: String): String = "$userId|$bookId"
+
+    private suspend fun <T : SavedBookListItem> toggleSavedBook(
+        newItem: T,
+        getLocal: suspend () -> T?,
+        upsertLocal: suspend (T) -> Unit,
+        deleteLocal: suspend () -> Unit,
+        upsertRemote: suspend (T) -> Unit,
+        deleteRemote: suspend () -> Unit
+    ): Boolean {
+        val existingItem = withContext(Dispatchers.IO) { getLocal() }
         val wasSaved = existingItem != null
 
         withContext(Dispatchers.IO) {
             if (wasSaved) {
-                local.deleteReadlist(key)
+                deleteLocal()
             } else {
-                local.upsertReadlist(newItem)
+                upsertLocal(newItem)
             }
         }
 
         try {
             if (wasSaved) {
-                firebase.deleteReadlist(userId, book.id)
+                deleteRemote()
             } else {
-                firebase.upsertReadlist(newItem)
+                upsertRemote(newItem)
             }
         } catch (e: Exception) {
             withContext(Dispatchers.IO) {
-                if (wasSaved) {
-                    local.upsertReadlist(existingItem!!)
-                } else if (!wasSaved) {
-                    local.deleteReadlist(key)
+                if (existingItem != null) {
+                    upsertLocal(existingItem)
+                } else {
+                    deleteLocal()
                 }
             }
             throw e
@@ -143,27 +141,29 @@ class ListsRepository(
         return !wasSaved
     }
 
-    suspend fun removeFromReadlist(userId: String, bookId: String) {
-        val key = buildKey(userId, bookId)
-        val existingItem = withContext(Dispatchers.IO) { local.getReadlist(key) }
+    private suspend fun <T : SavedBookListItem> removeSavedBook(
+        getLocal: suspend () -> T?,
+        upsertLocal: suspend (T) -> Unit,
+        deleteLocal: suspend () -> Unit,
+        deleteRemote: suspend () -> Unit
+    ) {
+        val existingItem = withContext(Dispatchers.IO) { getLocal() }
 
         withContext(Dispatchers.IO) {
-            local.deleteReadlist(key)
+            deleteLocal()
         }
 
         try {
-            firebase.deleteReadlist(userId, bookId)
+            deleteRemote()
         } catch (e: Exception) {
             if (existingItem != null) {
                 withContext(Dispatchers.IO) {
-                    local.upsertReadlist(existingItem)
+                    upsertLocal(existingItem)
                 }
             }
             throw e
         }
     }
-
-    private fun buildKey(userId: String, bookId: String): String = "$userId|$bookId"
 
     private suspend fun <T> resolveRemoteSeed(
         remoteItems: List<T>,

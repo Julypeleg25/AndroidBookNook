@@ -25,9 +25,4 @@ interface CachedBookDao {
     @Query("SELECT * FROM cached_books WHERE id = :bookId LIMIT 1")
     suspend fun getById(bookId: String): CachedBookEntity?
 
-    @Query("DELETE FROM cached_books WHERE lastFetchedAt < :minTime")
-    suspend fun deleteOlderThan(minTime: Long)
-
-    @Query("DELETE FROM cached_books")
-    suspend fun deleteAll()
 }

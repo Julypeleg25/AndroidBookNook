@@ -49,11 +49,11 @@ class LocalCacheDataSource(
 
     suspend fun deletePost(postId: String) = postDao.deleteById(postId)
 
-    suspend fun deleteUserPostsNotIn(userId: String, ids: List<String>) {
+    suspend fun deleteStalePostsForUser(userId: String, ids: List<String>) {
         if (ids.isEmpty()) {
             postDao.deleteByUser(userId)
         } else {
-            postDao.deleteByUserAndIdNotIn(userId, ids)
+            postDao.deleteStalePostsForUser(userId, ids)
         }
     }
 
@@ -93,8 +93,6 @@ class LocalCacheDataSource(
 
     suspend fun upsertUser(user: UserEntity) = userDao.upsert(user)
 
-    suspend fun clearUser() = userDao.clear()
-
     suspend fun cacheBooks(items: List<CachedBookEntity>) = cachedBookDao.upsertAll(items)
 
     suspend fun searchCachedBooks(query: String, limit: Int, offset: Int): List<CachedBookEntity> {
@@ -126,16 +124,6 @@ class LocalCacheDataSource(
     suspend fun updateUserContentProfile(userId: String, username: String, avatarUrl: String?) {
         postDao.updateUsernameForUser(userId, username)
         commentDao.updateAuthorProfile(userId, username, avatarUrl)
-    }
-
-    suspend fun clearAllData() {
-        postDao.deleteAll()
-        wishlistDao.deleteAll()
-        readlistDao.deleteAll()
-        userDao.clear()
-        cachedBookDao.deleteAll()
-        likeDao.deleteAll()
-        commentDao.deleteAll()
     }
 
     suspend fun clearUserScopedData() {
