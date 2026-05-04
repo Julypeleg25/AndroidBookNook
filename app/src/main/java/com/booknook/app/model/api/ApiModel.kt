@@ -14,7 +14,7 @@ private interface GoogleBooksApi {
     suspend fun search(
         @Query("q") q: String,
         @Query("startIndex") startIndex: Int = 0,
-        @Query("maxResults") maxResults: Int = 40,
+        @Query("maxResults") maxResults: Int = ApiModel.MAX_RESULTS_PER_PAGE,
         @Query("key") apiKey: String? = null
     ): SearchResponseDto
 

@@ -1,6 +1,5 @@
 package com.booknook.app.ui.profile
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,9 +11,10 @@ import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentProfileBinding
+import com.booknook.app.util.IMAGE_PICKER_MIME_TYPE
+import com.booknook.app.util.loadLocalImage
 import com.booknook.app.util.loadRemoteImage
 import com.google.android.material.snackbar.Snackbar
-import com.squareup.picasso.Picasso
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -45,7 +45,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
 
         binding.pickAvatarBtn.setOnClickListener {
-            pickImageLauncher.launch("image/*")
+            pickImageLauncher.launch(IMAGE_PICKER_MIME_TYPE)
         }
 
         binding.saveBtn.setOnClickListener {
@@ -68,7 +68,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
             when {
                 state.selectedAvatarUri != null -> {
-                    Picasso.get().load(state.selectedAvatarUri).fit().centerCrop().into(binding.avatarImage)
+                    binding.avatarImage.loadLocalImage(state.selectedAvatarUri, R.drawable.ic_default_avatar)
                 }
 
                 !state.user?.avatarUrl.isNullOrBlank() -> {
