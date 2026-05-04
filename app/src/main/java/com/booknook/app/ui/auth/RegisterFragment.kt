@@ -11,6 +11,8 @@ import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentRegisterBinding
+import com.booknook.app.util.IMAGE_PICKER_MIME_TYPE
+import com.booknook.app.util.loadLocalImage
 import com.google.android.material.snackbar.Snackbar
 
 class RegisterFragment : Fragment(R.layout.fragment_register) {
@@ -26,7 +28,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             selectedAvatarUri = it
-            binding.ivAvatar.setImageURI(it)
+            binding.ivAvatar.loadLocalImage(it, R.drawable.ic_default_avatar)
         }
     }
 
@@ -38,7 +40,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         observeViewModel()
 
         binding.btnPickAvatar.setOnClickListener {
-            pickImageLauncher.launch("image/*")
+            pickImageLauncher.launch(IMAGE_PICKER_MIME_TYPE)
         }
 
         binding.btnRegister.setOnClickListener {

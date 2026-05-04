@@ -12,10 +12,11 @@ import androidx.navigation.fragment.findNavController
 import com.booknook.app.R
 import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentCreatePostBinding
+import com.booknook.app.util.IMAGE_PICKER_MIME_TYPE
+import com.booknook.app.util.loadLocalImage
 import com.booknook.app.util.loadRemoteImage
 import com.booknook.app.util.nullIfBlank
 import com.google.android.material.snackbar.Snackbar
-import com.squareup.picasso.Picasso
 
 class EditPostFragment : Fragment(R.layout.fragment_create_post) {
 
@@ -39,7 +40,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
             pickedImage = it
             binding.imageCard.isVisible = true
             binding.imageRequiredHint.isVisible = false
-            Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
+            binding.imagePreview.loadLocalImage(it, R.drawable.book_placeholder)
             updateSaveButton()
         }
     }
@@ -59,7 +60,7 @@ class EditPostFragment : Fragment(R.layout.fragment_create_post) {
         observeViewModel()
         viewModel.loadPost(postId)
 
-        binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
+        binding.pickImageBtn.setOnClickListener { pickImage.launch(IMAGE_PICKER_MIME_TYPE) }
         binding.ratingBar.setOnRatingBarChangeListener { _, _, _ ->
             updateSaveButton()
         }

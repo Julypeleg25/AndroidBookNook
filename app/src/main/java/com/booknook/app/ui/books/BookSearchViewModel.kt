@@ -10,6 +10,7 @@ import com.booknook.app.R
 import com.booknook.app.data.repository.AuthRepository
 import com.booknook.app.data.repository.BooksRepository
 import com.booknook.app.model.Book
+import com.booknook.app.model.api.ApiModel
 import com.booknook.app.util.Event
 import com.booknook.app.util.Logger
 import com.booknook.app.util.toUserFriendlyMessageRes
@@ -127,7 +128,7 @@ class BookSearchViewModel(
     }
 
     private fun applyInitialResults(books: List<Book>) {
-        startIndex = books.size
+        advanceStartIndex()
         canLoadMore = books.isNotEmpty()
         _uiState.value = _uiState.value?.copy(
             results = books,
@@ -140,7 +141,7 @@ class BookSearchViewModel(
     private fun applyMoreResults(books: List<Book>) {
         val currentBooks = _uiState.value?.results.orEmpty()
         val mergedBooks = (currentBooks + books).distinctBy { it.id }
-        startIndex += books.size
+        advanceStartIndex()
         canLoadMore = books.isNotEmpty()
         _uiState.value = _uiState.value?.copy(
             results = mergedBooks,
@@ -148,6 +149,10 @@ class BookSearchViewModel(
             isEmpty = mergedBooks.isEmpty(),
             isEndReached = books.isEmpty()
         )
+    }
+
+    private fun advanceStartIndex() {
+        startIndex += ApiModel.MAX_RESULTS_PER_PAGE
     }
 
     companion object {

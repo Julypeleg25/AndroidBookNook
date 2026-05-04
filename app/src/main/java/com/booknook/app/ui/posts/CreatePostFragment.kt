@@ -12,8 +12,9 @@ import com.booknook.app.R
 import com.booknook.app.base.MyApplication
 import com.booknook.app.databinding.FragmentCreatePostBinding
 import com.booknook.app.model.Book
+import com.booknook.app.util.IMAGE_PICKER_MIME_TYPE
+import com.booknook.app.util.loadLocalImage
 import com.google.android.material.snackbar.Snackbar
-import com.squareup.picasso.Picasso
 
 class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
@@ -33,7 +34,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
             pickedImage = it
             binding.imageCard.isVisible = true
             binding.imageRequiredHint.isVisible = false
-            Picasso.get().load(it).fit().centerCrop().into(binding.imagePreview)
+            binding.imagePreview.loadLocalImage(it, R.drawable.book_placeholder)
         }
     }
 
@@ -68,7 +69,7 @@ class CreatePostFragment : Fragment(R.layout.fragment_create_post) {
 
         observeViewModel()
 
-        binding.pickImageBtn.setOnClickListener { pickImage.launch("image/*") }
+        binding.pickImageBtn.setOnClickListener { pickImage.launch(IMAGE_PICKER_MIME_TYPE) }
 
         binding.publishBtn.setOnClickListener {
             val rating = binding.ratingBar.rating.toInt()
